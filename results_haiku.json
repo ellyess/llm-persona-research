@@ -1,0 +1,353 @@
+{
+  "human_ceiling": 0.91,
+  "questions": [
+    {
+      "id": "personal_importance",
+      "text": "How important is the issue of climate change to you personally?",
+      "source": "Yale CCBM 2024, Q2.3 (verified against published report)",
+      "options": {
+        "A": "Extremely important",
+        "B": "Very important",
+        "C": "Somewhat important",
+        "D": "Not too important",
+        "E": "Not at all important"
+      },
+      "ground_truth": {
+        "A": 0.22,
+        "B": 0.29,
+        "C": 0.3,
+        "D": 0.13,
+        "E": 0.05
+      }
+    },
+    {
+      "id": "worry",
+      "text": "How worried are you about climate change?",
+      "source": "Yale CCBM 2024, Q2.1 (verified against published report)",
+      "options": {
+        "A": "Very worried",
+        "B": "Somewhat worried",
+        "C": "Not very worried",
+        "D": "Not at all worried"
+      },
+      "ground_truth": {
+        "A": 0.35,
+        "B": 0.45,
+        "C": 0.15,
+        "D": 0.05
+      }
+    },
+    {
+      "id": "harm_personally",
+      "text": "How much do you think climate change will harm you personally?",
+      "source": "Yale CCBM 2024, Q2.2 (verified against published report)",
+      "options": {
+        "A": "A great deal",
+        "B": "A moderate amount",
+        "C": "Only a little",
+        "D": "Not at all",
+        "E": "Don't know"
+      },
+      "ground_truth": {
+        "A": 0.17,
+        "B": 0.4,
+        "C": 0.29,
+        "D": 0.11,
+        "E": 0.04
+      }
+    }
+  ],
+  "per_question": {
+    "personal_importance": {
+      "baseline": {
+        "distribution": {
+          "A": 0.125,
+          "B": 0.25,
+          "C": 0.375,
+          "D": 0.25,
+          "E": 0.0
+        },
+        "distribution_accuracy": 0.81,
+        "tvd": 0.19,
+        "jsd": 0.05254387119932116,
+        "peak": 0.375,
+        "entropy": 1.9056390622295665,
+        "unparseable_rate": 0.0,
+        "n": 8
+      },
+      "demographic": {
+        "distribution": {
+          "A": 0.25,
+          "B": 0.125,
+          "C": 0.25,
+          "D": 0.25,
+          "E": 0.125
+        },
+        "distribution_accuracy": 0.78,
+        "tvd": 0.21999999999999997,
+        "jsd": 0.05254171571861698,
+        "peak": 0.25,
+        "entropy": 2.25,
+        "unparseable_rate": 0.0,
+        "n": 8
+      },
+      "rich": {
+        "distribution": {
+          "A": 0.125,
+          "B": 0.375,
+          "C": 0.375,
+          "D": 0.0,
+          "E": 0.125
+        },
+        "distribution_accuracy": 0.77,
+        "tvd": 0.23,
+        "jsd": 0.09347614012913866,
+        "peak": 0.375,
+        "entropy": 1.811278124459133,
+        "unparseable_rate": 0.0,
+        "n": 8
+      },
+      "network": {
+        "distribution": {
+          "A": 0.125,
+          "B": 0.25,
+          "C": 0.25,
+          "D": 0.375,
+          "E": 0.0
+        },
+        "distribution_accuracy": 0.76,
+        "tvd": 0.24,
+        "jsd": 0.08200304214414827,
+        "peak": 0.375,
+        "entropy": 1.9056390622295665,
+        "unparseable_rate": 0.0,
+        "n": 8
+      },
+      "elicited": {
+        "distribution": {
+          "A": 0.17909690969096909,
+          "B": 0.28072694769476947,
+          "C": 0.3082774527452745,
+          "D": 0.1491941694169417,
+          "E": 0.08270452045204521
+        },
+        "distribution_accuracy": 0.9448238573857386,
+        "tvd": 0.055176142614261424,
+        "jsd": 0.005023088812222874,
+        "peak": 0.3082774527452745,
+        "entropy": 2.1891356549872008,
+        "unparseable_rate": 0.0,
+        "n": 8
+      }
+    },
+    "worry": {
+      "baseline": {
+        "distribution": {
+          "A": 0.0,
+          "B": 0.625,
+          "C": 0.25,
+          "D": 0.125
+        },
+        "distribution_accuracy": 0.65,
+        "tvd": 0.35,
+        "jsd": 0.20641102864217095,
+        "peak": 0.625,
+        "entropy": 1.2987949406953985,
+        "unparseable_rate": 0.0,
+        "n": 8
+      },
+      "demographic": {
+        "distribution": {
+          "A": 0.0,
+          "B": 0.25,
+          "C": 0.75,
+          "D": 0.0
+        },
+        "distribution_accuracy": 0.4,
+        "tvd": 0.6,
+        "jsd": 0.3783898247235197,
+        "peak": 0.75,
+        "entropy": 0.8112781244591328,
+        "unparseable_rate": 0.0,
+        "n": 8
+      },
+      "rich": {
+        "distribution": {
+          "A": 0.42857142857142855,
+          "B": 0.14285714285714285,
+          "C": 0.14285714285714285,
+          "D": 0.2857142857142857
+        },
+        "distribution_accuracy": 0.6857142857142857,
+        "tvd": 0.3142857142857143,
+        "jsd": 0.12914849564902547,
+        "peak": 0.42857142857142855,
+        "entropy": 1.8423709931771084,
+        "unparseable_rate": 0.125,
+        "n": 8
+      },
+      "network": {
+        "distribution": {
+          "A": 0.5,
+          "B": 0.3333333333333333,
+          "C": 0.16666666666666666,
+          "D": 0.0
+        },
+        "distribution_accuracy": 0.8333333333333333,
+        "tvd": 0.16666666666666669,
+        "jsd": 0.041204357831679195,
+        "peak": 0.5,
+        "entropy": 1.4591479170272448,
+        "unparseable_rate": 0.25,
+        "n": 8
+      },
+      "elicited": {
+        "distribution": {
+          "A": 0.19228703625201687,
+          "B": 0.3051170274257421,
+          "C": 0.3641676354657417,
+          "D": 0.13842830085649932
+        },
+        "distribution_accuracy": 0.697404063677759,
+        "tvd": 0.302595936322241,
+        "jsd": 0.07562191655153168,
+        "peak": 0.3641676354657417,
+        "entropy": 1.9055371105474046,
+        "unparseable_rate": 0.0,
+        "n": 8
+      }
+    },
+    "harm_personally": {
+      "baseline": {
+        "distribution": {
+          "A": 0.125,
+          "B": 0.5,
+          "C": 0.125,
+          "D": 0.25,
+          "E": 0.0
+        },
+        "distribution_accuracy": 0.755,
+        "tvd": 0.245,
+        "jsd": 0.07099311329633469,
+        "peak": 0.5,
+        "entropy": 1.75,
+        "unparseable_rate": 0.0,
+        "n": 8
+      },
+      "demographic": {
+        "distribution": {
+          "A": 0.25,
+          "B": 0.125,
+          "C": 0.25,
+          "D": 0.25,
+          "E": 0.125
+        },
+        "distribution_accuracy": 0.69,
+        "tvd": 0.31,
+        "jsd": 0.09797929082794088,
+        "peak": 0.25,
+        "entropy": 2.25,
+        "unparseable_rate": 0.0,
+        "n": 8
+      },
+      "rich": {
+        "distribution": {
+          "A": 0.0,
+          "B": 0.75,
+          "C": 0.125,
+          "D": 0.125,
+          "E": 0.0
+        },
+        "distribution_accuracy": 0.63,
+        "tvd": 0.37,
+        "jsd": 0.16870898358419273,
+        "peak": 0.75,
+        "entropy": 1.061278124459133,
+        "unparseable_rate": 0.0,
+        "n": 8
+      },
+      "network": {
+        "distribution": {
+          "A": 0.25,
+          "B": 0.0,
+          "C": 0.625,
+          "D": 0.125,
+          "E": 0.0
+        },
+        "distribution_accuracy": 0.565,
+        "tvd": 0.435,
+        "jsd": 0.2711574244938797,
+        "peak": 0.625,
+        "entropy": 1.2987949406953985,
+        "unparseable_rate": 0.0,
+        "n": 8
+      },
+      "elicited": {
+        "distribution": {
+          "A": 0.18585858585858586,
+          "B": 0.2886489898989899,
+          "C": 0.30609848484848484,
+          "D": 0.14296717171717171,
+          "E": 0.07642676767676768
+        },
+        "distribution_accuracy": 0.8936489898989899,
+        "tvd": 0.10635101010101011,
+        "jsd": 0.012668707200952666,
+        "peak": 0.30609848484848484,
+        "entropy": 2.176171342870169,
+        "unparseable_rate": 0.0,
+        "n": 8
+      }
+    }
+  },
+  "averaged_distribution_accuracy": {
+    "baseline": 0.7383333333333333,
+    "demographic": 0.6233333333333334,
+    "rich": 0.6952380952380953,
+    "network": 0.7194444444444444,
+    "elicited": 0.8452923036541625
+  },
+  "consistency_first_question": {
+    "demographic": 0.55,
+    "rich": 0.425,
+    "network": 0.55
+  },
+  "age_gradient_q1": {
+    "demographic": {
+      "young_mean": 3.0,
+      "old_mean": 3.25,
+      "gradient": -0.25,
+      "as_expected": false,
+      "n_young": 2,
+      "n_old": 4
+    },
+    "rich": {
+      "young_mean": 4.5,
+      "old_mean": 2.75,
+      "gradient": 1.75,
+      "as_expected": true,
+      "n_young": 2,
+      "n_old": 4
+    },
+    "network": {
+      "young_mean": 3.0,
+      "old_mean": 3.5,
+      "gradient": -0.5,
+      "as_expected": false,
+      "n_young": 2,
+      "n_old": 4
+    },
+    "elicited": {
+      "young_mean": 3.6538383838383837,
+      "old_mean": 3.10290404040404,
+      "gradient": 0.5509343434343434,
+      "as_expected": true,
+      "n_young": 2,
+      "n_old": 4
+    }
+  },
+  "elicited_dispersion_q1": {
+    "mean_pairwise_tvd": 0.1348592716414498,
+    "n": 8
+  }
+}

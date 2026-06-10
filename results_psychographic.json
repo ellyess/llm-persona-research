@@ -1,0 +1,55 @@
+{
+  "question": "personal_importance",
+  "psychographic_q1": {
+    "demographic_eval": {
+      "distribution": {
+        "A": 0.25,
+        "B": 0.1,
+        "C": 0.35,
+        "D": 0.15,
+        "E": 0.15
+      },
+      "distribution_accuracy": 0.805,
+      "tvd": 0.19499999999999998,
+      "jsd": 0.056317790875657366,
+      "peak": 0.35,
+      "entropy": 2.1833830982290134,
+      "unparseable_rate": 0.0,
+      "n": 20
+    },
+    "psychographic_eval": {
+      "distribution": {
+        "A": 0.4,
+        "B": 0.35,
+        "C": 0.05,
+        "D": 0.15,
+        "E": 0.05
+      },
+      "distribution_accuracy": 0.745,
+      "tvd": 0.255,
+      "jsd": 0.09312696407634904,
+      "peak": 0.4,
+      "entropy": 1.9016094970590274,
+      "unparseable_rate": 0.0,
+      "n": 20
+    },
+    "political_gradient": {
+      "demographic": {
+        "green_mean": 3.0,
+        "right_mean": 3.75,
+        "gradient": -0.75,
+        "as_expected": false,
+        "n_green": 14,
+        "n_right": 4
+      },
+      "psychographic": {
+        "green_mean": 4.071428571428571,
+        "right_mean": 3.0,
+        "gradient": 1.0714285714285712,
+        "as_expected": true,
+        "n_green": 14,
+        "n_right": 4
+      }
+    }
+  }
+}
