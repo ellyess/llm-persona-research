@@ -1,124 +1,127 @@
 {
-  "question": "personal_importance",
+  "question": "ai_llm_benefit",
   "axes_q1": {
     "demographic_eval": {
       "distribution": {
-        "A": 0.1,
-        "B": 0.55,
-        "C": 0.32,
-        "D": 0.03,
-        "E": 0.0
+        "A": 0.02,
+        "B": 0.72,
+        "C": 0.12,
+        "D": 0.0,
+        "E": 0.14
       },
-      "distribution_accuracy": 0.725,
-      "tvd": 0.275,
-      "jsd": 0.0956774830515056,
-      "peak": 0.55,
-      "entropy": 1.484366662825791,
+      "distribution_accuracy": 0.74,
+      "tvd": 0.26,
+      "jsd": 0.10166648169243751,
+      "peak": 0.72,
+      "entropy": 1.2182849995616565,
       "unparseable_rate": 0.0,
       "n": 100
     },
     "axes": {
-      "political": {
-        "adds": "political identity",
-        "eval": {
-          "distribution": {
-            "A": 0.2,
-            "B": 0.32,
-            "C": 0.29,
-            "D": 0.19,
-            "E": 0.0
-          },
-          "distribution_accuracy": 0.915,
-          "tvd": 0.08500000000000002,
-          "jsd": 0.030018814621461033,
-          "peak": 0.32,
-          "entropy": 1.9635498546559749,
-          "unparseable_rate": 0.0,
-          "n": 100
-        },
-        "gradient": {
-          "high_mean": 4.294117647058823,
-          "low_mean": 2.5277777777777777,
-          "gradient": 1.7663398692810457,
-          "as_expected": true,
-          "n_high": 51,
-          "n_low": 36
-        },
-        "control_gradient": {
-          "high_mean": 3.803921568627451,
-          "low_mean": 3.7222222222222223,
-          "gradient": 0.08169934640522847,
-          "as_expected": true,
-          "n_high": 51,
-          "n_low": 36
-        }
-      },
       "openness": {
         "adds": "Big Five openness",
+        "expected": "positive",
         "eval": {
           "distribution": {
-            "A": 0.12,
-            "B": 0.41,
-            "C": 0.41,
-            "D": 0.06,
-            "E": 0.0
+            "A": 0.08,
+            "B": 0.65,
+            "C": 0.15,
+            "D": 0.0,
+            "E": 0.12
           },
-          "distribution_accuracy": 0.775,
-          "tvd": 0.225,
-          "jsd": 0.058918760177769106,
-          "peak": 0.41,
-          "entropy": 1.6653702958580878,
-          "unparseable_rate": 0.0,
-          "n": 100
-        },
-        "gradient": {
-          "high_mean": 4.379310344827586,
-          "low_mean": 3.075,
-          "gradient": 1.3043103448275861,
-          "as_expected": true,
-          "n_high": 29,
-          "n_low": 40
-        },
-        "control_gradient": {
-          "high_mean": 3.7241379310344827,
-          "low_mean": 3.8,
-          "gradient": -0.07586206896551717,
-          "as_expected": false,
-          "n_high": 29,
-          "n_low": 40
-        }
-      },
-      "values": {
-        "adds": "Schwartz dominant value",
-        "eval": {
-          "distribution": {
-            "A": 0.09,
-            "B": 0.26,
-            "C": 0.37,
-            "D": 0.28,
-            "E": 0.0
-          },
-          "distribution_accuracy": 0.785,
-          "tvd": 0.215,
-          "jsd": 0.0687768544374078,
-          "peak": 0.37,
-          "entropy": 1.862891489469392,
+          "distribution_accuracy": 0.79,
+          "tvd": 0.21,
+          "jsd": 0.05861339918103514,
+          "peak": 0.65,
+          "entropy": 1.4730880218784126,
           "unparseable_rate": 0.0,
           "n": 100
         },
         "gradient": {
           "high_mean": 4.275862068965517,
-          "low_mean": 2.625,
-          "gradient": 1.650862068965517,
+          "low_mean": 2.875,
+          "gradient": 1.400862068965517,
           "as_expected": true,
+          "n_high": 29,
+          "n_low": 40
+        },
+        "control_gradient": {
+          "high_mean": 3.5517241379310347,
+          "low_mean": 3.35,
+          "gradient": 0.2017241379310346,
+          "as_expected": true,
+          "n_high": 29,
+          "n_low": 40
+        }
+      },
+      "political": {
+        "adds": "political identity",
+        "expected": "exploratory",
+        "eval": {
+          "distribution": {
+            "A": 0.01,
+            "B": 0.65,
+            "C": 0.16,
+            "D": 0.0,
+            "E": 0.18
+          },
+          "distribution_accuracy": 0.78,
+          "tvd": 0.22,
+          "jsd": 0.10505041206519564,
+          "peak": 0.65,
+          "entropy": 1.338730611046613,
+          "unparseable_rate": 0.0,
+          "n": 100
+        },
+        "gradient": {
+          "high_mean": 3.2549019607843137,
+          "low_mean": 3.4166666666666665,
+          "gradient": -0.1617647058823528,
+          "as_expected": null,
+          "n_high": 51,
+          "n_low": 36
+        },
+        "control_gradient": {
+          "high_mean": 3.450980392156863,
+          "low_mean": 3.638888888888889,
+          "gradient": -0.18790849673202592,
+          "as_expected": null,
+          "n_high": 51,
+          "n_low": 36
+        }
+      },
+      "values": {
+        "adds": "Schwartz dominant value",
+        "expected": "exploratory",
+        "eval": {
+          "distribution": {
+            "A": 0.21,
+            "B": 0.35,
+            "C": 0.36,
+            "D": 0.01,
+            "E": 0.07
+          },
+          "distribution_accuracy": 0.73,
+          "tvd": 0.27,
+          "jsd": 0.07979724159413985,
+          "peak": 0.36,
+          "entropy": 1.868532629997182,
+          "unparseable_rate": 0.0,
+          "n": 100
+        },
+        "gradient": {
+          "high_mean": 3.206896551724138,
+          "low_mean": 4.625,
+          "gradient": -1.418103448275862,
+          "as_expected": null,
           "n_high": 29,
           "n_low": 24
         },
         "control_gradient": {
-          "high_mean": 3.6551724137931036,
+          "high_mean": 3.310344827586207,
           "low_mean": 3.75,
-          "gradient": -0.09482758620689635,
-          "as_expected": false,
+          "gradient": -0.43965517241379315,
+          "as_expected": null,
           "n_high": 29,
           "n_low": 24
         }
@@ -127,42 +130,42 @@
     "composite": {
       "eval": {
         "distribution": {
-          "A": 0.08,
-          "B": 0.3,
-          "C": 0.37,
-          "D": 0.25,
-          "E": 0.0
+          "A": 0.04,
+          "B": 0.55,
+          "C": 0.28,
+          "D": 0.0,
+          "E": 0.13
         },
-        "distribution_accuracy": 0.8049999999999999,
-        "tvd": 0.195,
-        "jsd": 0.06611198380786758,
-        "peak": 0.37,
-        "entropy": 1.8433272183657765,
+        "distribution_accuracy": 0.76,
+        "tvd": 0.24000000000000002,
+        "jsd": 0.08731889795678893,
+        "peak": 0.55,
+        "entropy": 1.5569918058016907,
         "unparseable_rate": 0.0,
         "n": 100
       },
       "gradients": {
-        "political": {
-          "high_mean": 3.803921568627451,
-          "low_mean": 2.4722222222222223,
-          "gradient": 1.3316993464052285,
-          "as_expected": true,
-          "n_high": 51,
-          "n_low": 36
-        },
         "openness": {
-          "high_mean": 3.8275862068965516,
-          "low_mean": 2.7,
-          "gradient": 1.1275862068965514,
+          "high_mean": 4.068965517241379,
+          "low_mean": 2.675,
+          "gradient": 1.3939655172413792,
           "as_expected": true,
           "n_high": 29,
           "n_low": 40
         },
+        "political": {
+          "high_mean": 3.4313725490196076,
+          "low_mean": 3.2777777777777777,
+          "gradient": 0.15359477124182996,
+          "as_expected": null,
+          "n_high": 51,
+          "n_low": 36
+        },
         "values": {
-          "high_mean": 3.310344827586207,
-          "low_mean": 3.25,
-          "gradient": 0.06034482758620685,
-          "as_expected": true,
+          "high_mean": 2.8620689655172415,
+          "low_mean": 3.8333333333333335,
+          "gradient": -0.9712643678160919,
+          "as_expected": null,
           "n_high": 29,
           "n_low": 24
         }

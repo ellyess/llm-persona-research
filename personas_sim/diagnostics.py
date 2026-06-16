@@ -45,12 +45,25 @@ def _persona_score(answer, scores) -> float:
     return scores.get(answer)
 
 
-def age_gradient(personas, answers, question) -> dict:
-    """Compare mean concern score of young vs old personas.
+def _meets_expectation(grad, expected):
+    """Whether a gradient matches its declared expected direction.
+    "positive"/"negative" return a bool; "exploratory" returns None (the
+    gradient is reported but makes no pass/fail claim -- used when a topic has
+    no well-established expected direction for an axis, e.g. politics vs AI)."""
+    if expected == "positive":
+        return grad > 0
+    if expected == "negative":
+        return grad < 0
+    return None  # exploratory
+
+
+def age_gradient(personas, answers, question, expected="positive") -> dict:
+    """Compare mean stance score of young vs old personas.
 
     `personas` and `answers` are aligned lists; each answer is a letter or a
     soft-distribution dict. Returns young/old means, the gradient (young-old),
-    and whether its sign matches the expected 'younger more concerned'."""
+    and whether its sign matches `expected` (default "positive" = younger
+    scores higher, which holds for both climate concern and AI optimism)."""
     scores = _concern_scores(question)
     young, old = [], []
     for p, a in zip(personas, answers):
@@ -72,7 +85,8 @@ def age_gradient(personas, answers, question) -> dict:
     ym, om = sum(young) / len(young), sum(old) / len(old)
     grad = ym - om
     return {"young_mean": ym, "old_mean": om, "gradient": grad,
-            "as_expected": grad > 0, "n_young": len(young), "n_old": len(old)}
+            "as_expected": _meets_expectation(grad, expected),
+            "n_young": len(young), "n_old": len(old)}
 
 
 # --- paired psychographic-axis gradients ------------------------------------
@@ -93,16 +107,18 @@ CONCERNED_VALUES = {"self-transcendence"}
 SKEPTIC_VALUES = {"self-enhancement"}
 
 
-def axis_gradient(personas, answers, question, attr_key, high_set, low_set) -> dict:
-    """Concern gradient between a HIGH-concern group and a LOW-concern group,
-    split on `p[attr_key]`. A generalisation of `age_gradient` that works for
-    any psychographic axis (politics, openness, values, ...).
+def axis_gradient(personas, answers, question, attr_key, high_set, low_set,
+                  expected="positive") -> dict:
+    """Stance gradient between a HIGH-stance group and a LOW-stance group, split
+    on `p[attr_key]`. A generalisation of `age_gradient` that works for any
+    psychographic axis (politics, openness, values, ...).
 
-    Run it for the axis's own method (the axis IS in the prompt -> expect a clear
-    POSITIVE gradient) AND for `demographic` as a control (the axis is NOT in the
-    prompt, though the attribute is still stored -> expect ~flat). Positive where
-    conditioned, flat where not = proof the axis is actually driving the answers,
-    not leaking in via correlated demographics."""
+    Run it for the axis's own method (the axis IS in the prompt) AND for
+    `demographic` as a control (the axis is NOT in the prompt, though the
+    attribute is still stored -> expect ~flat). `expected` declares the known
+    direction: "positive" (high group scores higher), "negative", or
+    "exploratory" (no established expectation, e.g. politics for AI -> the
+    gradient is reported but as_expected is None)."""
     scores = _concern_scores(question)
     high, low = [], []
     for p, a in zip(personas, answers):
@@ -122,7 +138,8 @@ def axis_gradient(personas, answers, question, attr_key, high_set, low_set) -> d
     hm, lm = sum(high) / len(high), sum(low) / len(low)
     grad = hm - lm
     return {"high_mean": hm, "low_mean": lm, "gradient": grad,
-            "as_expected": grad > 0, "n_high": len(high), "n_low": len(low)}
+            "as_expected": _meets_expectation(grad, expected),
+            "n_high": len(high), "n_low": len(low)}
 
 
 def _tvd(p: dict, q: dict) -> float:

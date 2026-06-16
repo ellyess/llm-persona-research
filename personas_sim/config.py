@@ -10,13 +10,15 @@ on Climate Change Communication.
   - Nationally representative survey of UK residents aged 16+
   - 10,660 interviews, 7-13 November 2024, MoE +/-0.9pts @ 95%
 
-All three questions use Yale CCBM 2024 figures as reported:
+The three climate questions use Yale CCBM 2024 figures as reported:
   Q1 ("personal importance") = Q2.3, Q2 ("worry") = Q2.1,
   Q3 ("harm personally") = Q2.2.
-Each question's `source` field records its provenance and prints at runtime.
-Percentages are the report's body-text / data-table figures; some columns sum
-to 99-101 due to source rounding (harmless -- distributions are normalised at
-evaluation time). See SOURCES.md for the full mapping.
+A fourth question (`ai_llm_benefit`, topic="ai") is a GENERALITY TEST on a
+different topic from a THIRD source: Ada Lovelace/Alan Turing "How do people
+feel about AI?" Wave 2 (2025), Figure 3 (LLMs). Each question's `source` field
+records its provenance and prints at runtime. Percentages are the reports'
+figures; some columns sum to 99-101 due to source rounding (harmless --
+distributions are normalised at evaluation time). See SOURCES.md.
 
 DEMOGRAPHIC SOURCE
 ------------------
@@ -55,6 +57,7 @@ QUESTIONS = [
         # Sums to 0.99 (source rounds to whole percents: 22/29/30/13/5)
         "ground_truth": {"A": 0.22, "B": 0.29, "C": 0.30, "D": 0.13, "E": 0.05},
         "source": "Yale CCBM 2024, Q2.3 (verified against published report)",
+        "topic": "climate",
         "rephrasings": [
             "How important is the issue of climate change to you personally?",
             "When you think about climate change, how big a personal issue is it for you?",
@@ -74,6 +77,7 @@ QUESTIONS = [
         },
         "ground_truth": {"A": 0.35, "B": 0.45, "C": 0.15, "D": 0.05},
         "source": "Yale CCBM 2024, Q2.1 (verified against published report)",
+        "topic": "climate",
     },
     {
         "id": "harm_personally",
@@ -87,6 +91,30 @@ QUESTIONS = [
         },
         "ground_truth": {"A": 0.17, "B": 0.4, "C": 0.29, "D": 0.11, "E":0.04},
         "source": "Yale CCBM 2024, Q2.2 (verified against published report)",
+        "topic": "climate",
+    },
+    {
+        # GENERALITY TEST: a different topic (AI) from a third source, to check
+        # whether the methods and the psychographic-axis approach transfer
+        # beyond climate. Ordinal with A = most positive, so the stance-score
+        # machinery applies; "Don't know" is the trailing option E (as in Q3).
+        "id": "ai_llm_benefit",
+        "text": "To what extent do you think the use of large language models "
+                "(like ChatGPT) will be beneficial?",
+        "options": {
+            "A": "Very beneficial",
+            "B": "Fairly beneficial",
+            "C": "Not very beneficial",
+            "D": "Not at all beneficial",
+            "E": "Don't know",
+        },
+        # Ada Lovelace / Alan Turing, "How do people feel about AI?" (Wave 2,
+        # Mar 2025), Figure 3, LLMs row: Very 17 / Fairly 46 / Not very 13 /
+        # Not at all 6; Don't know = 18 by subtraction. Sums to 1.00.
+        "ground_truth": {"A": 0.17, "B": 0.46, "C": 0.13, "D": 0.06, "E": 0.18},
+        "source": "Ada Lovelace/Alan Turing 'How do people feel about AI?' "
+                  "Wave 2 (Mar 2025), Fig 3 (LLMs); UK n=3,513 (verified)",
+        "topic": "ai",
     },
 ]
 

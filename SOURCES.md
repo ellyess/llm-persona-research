@@ -167,6 +167,36 @@ openness and Schwartz values are the psychometrically grounded, directional
 alternatives.
 
 ---
+
+## 6. AI attitudes (generality test, THIRD source)
+
+Used in [`personas_sim/config.py`](personas_sim/config.py) → the `ai_llm_benefit`
+question (topic="ai"). This is a deliberate test of whether the methods and the
+psychographic-axis approach transfer beyond climate.
+
+- **Source:** Ada Lovelace Institute & The Alan Turing Institute, *How do people
+  feel about AI? Wave 2* (March 2025). Nationally representative UK survey,
+  n=3,513, fieldwork November 2024.
+  https://www.turing.ac.uk/news/publications/how-do-people-feel-about-ai
+- **Item:** Figure 3, "To what extent do you think that the use of this
+  technology will be beneficial?", **Large language models (e.g. ChatGPT)** row.
+  Reported: Very 17%, Fairly 46%, Not very 13%, Not at all 6%. The trailing
+  "Don't know / Prefer not to say" = 18% by subtraction (the four named bars sum
+  to 82). Mapped to A=Very … D=Not at all, E=Don't know (sums to 1.00).
+- **Honest notes:** a THIRD source (further from the single-publication ideal);
+  frame is UK adults ~18+ (minor mismatch with the personas' 16+ frame, which
+  comes from the Yale sample). The survey deliberately oversampled lower-income,
+  lower-digital-skill, and Black/Asian respondents and then weighted, so the
+  headline figures are nationally representative.
+- **Why this item:** LLMs is the most general-purpose, on-brand AI use and has a
+  good spread across categories (unlike, say, facial recognition at 91%
+  beneficial, which would be near-degenerate).
+- **Axis expectation for AI** (`AXES_BY_QID` in run.py): **Openness expected
+  positive** (openness = openness to new technology); **political and values
+  exploratory** (no established AI direction). This is how the "dominant axis is
+  topic-dependent" hypothesis is encoded and tested.
+
+---
 ---
 
 # Part 2: References, the literature behind the design choices
@@ -256,6 +286,16 @@ as one sentence and validated by a paired gradient
   types, and no established link to climate attitudes, so its paired gradient
   would have no expected sign to validate against. Rejected in favour of the
   evidence-based axes above. (See Part 1 §5.)
+
+- **The dominant axis is topic-dependent (generality test).** The expected
+  direction of each axis is *per question*, not global. For the AI question,
+  Openness is the pre-registered expected-positive axis because openness to
+  experience predicts technology acceptance and positive attitudes to new
+  technology (a robust finding in the technology-adoption / Big Five
+  literature), whereas political identity, which dominates climate attitudes,
+  has no comparably established link to AI optimism and is therefore treated as
+  exploratory. This is encoded in `AXES_BY_QID` (run.py) and is the basis of the
+  "which axis to condition on depends on the question" finding.
 
 ### Anti-sycophancy framing
 

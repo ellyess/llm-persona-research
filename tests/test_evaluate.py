@@ -188,6 +188,25 @@ def test_axis_gradient_political_sign():
     assert g["n_high"] == 2 and g["n_low"] == 2
 
 
+def test_axis_gradient_exploratory_makes_no_claim():
+    # expected="exploratory" reports the gradient but as_expected stays None
+    g = axis_gradient(
+        [{"openness": "high openness"}, {"openness": "low openness"}],
+        ["A", "C"], _IMPORTANCE, "openness", HIGH_OPENNESS, LOW_OPENNESS,
+        expected="exploratory")
+    assert g["gradient"] is not None and g["as_expected"] is None
+
+
+def test_ai_question_present_and_evaluates():
+    from personas_sim.config import QUESTIONS
+    ai = [q for q in QUESTIONS if q.get("topic") == "ai"]
+    assert ai, "expected an AI-topic question"
+    q = ai[0]
+    r = evaluate(["A", "B", "C", "D", "E"], q)
+    assert 0.0 <= r["distribution_accuracy"] <= 1.0 and r["n"] == 5
+    assert abs(sum(q["ground_truth"].values()) - 1.0) < 1e-9
+
+
 def test_axis_gradient_openness_and_values():
     # openness: high more concerned than low
     op = axis_gradient(

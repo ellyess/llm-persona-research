@@ -133,8 +133,15 @@ def _persona_lean(text: str):
 def _mock_weights(persona_text: str):
     """Weights over the 5-letter space. Age makes an age gradient visible; a
     psychographic lean (political/openness/values, when present in the prompt)
-    shifts climate-concern, so the mock demonstrates each axis method and its
-    paired gradient offline. NOT meant to be realistic."""
+    shifts the stance toward A/B, so the mock demonstrates each axis method and
+    its paired gradient offline. NOT meant to be realistic.
+
+    Note for the AI generality question: the mock keys off the persona prompt
+    only (it can't see the question). Openness and age transfer correctly to AI
+    (high openness / younger = more pro-technology = more A/B), but the
+    political/values shifts are CLIMATE-calibrated and are not meaningful for AI
+    -- which is why politics/values are 'exploratory' for AI and AI axis
+    conclusions need the real model (USE_MOCK=0)."""
     age = _extract_age(persona_text)
     if age is not None and age < 35:
         base = [0.30, 0.34, 0.24, 0.08, 0.04]    # younger: more "important"

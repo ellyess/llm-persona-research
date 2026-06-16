@@ -112,6 +112,53 @@ marginal by reciting it. *(Caveat: Q1 only, single run with ~3pt of LLM sampling
 noise, and the openness/values marginals are approximate modelling inputs; see
 [SOURCES.md](SOURCES.md) and limitations.)*
 
+### Generality test: the dominant axis is topic-dependent (AI attitudes)
+
+A 4th question on a **different topic** (AI: "will LLMs be beneficial?", Ada
+Lovelace / Alan Turing 2025, n=3,513) tests whether the approach generalises,
+and a specific hypothesis: **which psychographic axis dominates depends on the
+question.** Same three axes, same code, run on AI instead of climate
+(`claude-sonnet-4-6`, Q-only extension). The in-prompt gradients:
+
+| axis | climate | AI | what changed |
+|------|:---:|:---:|---|
+| **political** | **+1.77** (dominant) | **−0.16** (null) | the climate champion carries no AI signal |
+| **openness** | +1.25 (weakest) | **+1.40** (dominant) | worst→best: openness = openness to new tech |
+| **values** | +1.73 | **−1.42** | flips sign (exploratory; see below) |
+
+Three findings, all on real data:
+
+1. **Openness goes from the weakest climate axis to the dominant AI axis**
+   (+1.40, matching its demographic control's flat +0.20). Exactly the
+   pre-registered prediction.
+2. **Political identity, the best axis for climate, is null for AI** (+1.77 →
+   −0.16). The single most useful axis for one topic carries no signal for
+   another, so "the best persona axis" is undefined without naming the topic.
+3. **Values flips sign** (+1.73 → −1.42). This axis was *exploratory* for AI (I
+   pre-registered only openness's direction, so no pass/fail claim), but the
+   signal is striking and intuitive: self-transcendent personas (prioritising
+   fairness and others' welfare) are *more* climate-concerned yet *less* sure AI
+   is beneficial, plausibly weighing AI's societal harms. A hypothesis to
+   pre-register and re-test, surfaced precisely because the axis was left
+   exploratory rather than assumed positive.
+
+**The diagnostics earn their keep again.** On AI accuracy `openness` (79%) and
+`political` (78%) look similar, but only openness has a real gradient (+1.40);
+politics's is null. So politics nudges AI accuracy without doing genuine
+sub-group work, the same "right for the wrong reason" trap the gradient catches
+for climate, now shown on a second topic. The core methods also generalise:
+demographic personas mode-collapse on AI too (peak 70% vs truth 46%), baseline
+is degenerate (82% "Don't know"), and `elicited` is strongest (76.7%).
+
+Run it with:
+
+```bash
+MODEL=claude-sonnet-4-6 USE_MOCK=0 N=100 EXT_ONLY=1 EXT_QUESTION=ai_llm_benefit python -m personas_sim.run
+```
+
+*(Caveat: single item, single run, ~3pt sampling noise; AI ground truth is a
+third source, ~18+ frame; see [SOURCES.md](SOURCES.md).)*
+
 ### Why this is a market-research problem
 
 Consumer-sustainability and ESG attitudes are a core market-research category
@@ -130,7 +177,7 @@ Yale Program on Climate Change Communication, *Climate Change in the British
 Mind, 2024* (Leiserowitz et al., 2025). Nationally representative survey of
 UK residents aged 16+, 10,660 interviews, 7–13 Nov 2024, MoE ±0.9pts.
 
-Three single-select items are used (see [config.py](personas_sim/config.py)):
+Three climate items are used (see [config.py](personas_sim/config.py)):
 
 1. **personal_importance** *(Q2.3)*: "How important is the issue of climate
    change to you personally?"  Five-point scale.
@@ -139,15 +186,19 @@ Three single-select items are used (see [config.py](personas_sim/config.py)):
 3. **harm_personally** *(Q2.2)*: "How much do you think climate change
    will harm you personally?"  Five-point scale (incl. "Don't know").
 
-Each question's ground truth is taken from the published CCBM 2024 report;
-the `source` field on every question records the provenance and prints at
-runtime.
+A fourth item is a **generality test on a different topic** (see "Generality
+test" in Results), from a third source:
 
-Three items is enough to ask: **does a method's accuracy generalise across
-questions, or did it get lucky on one?** Per-question accuracies are reported
-alongside the average. The three questions also span both 4-point and
-5-point scales, so the pipeline is exercised across different option
-counts.
+4. **ai_llm_benefit** *(topic: ai)*: "To what extent do you think the use of
+   large language models (like ChatGPT) will be beneficial?"  Five-point scale,
+   from [Ada Lovelace / Alan Turing, "How do people feel about AI?" Wave 2
+   (2025)](https://www.turing.ac.uk/news/publications/how-do-people-feel-about-ai),
+   Figure 3 (LLMs), nationally representative UK (n=3,513).
+
+Each question's ground truth is from its published report; the `source` field
+records provenance and prints at runtime. Questions carry a `topic` tag
+(climate / ai) so accuracy is averaged per topic. They span 4- and 5-point
+scales, so the pipeline is exercised across different option counts.
 
 ## Method: five approaches, compared
 
@@ -303,8 +354,10 @@ USE_MOCK=0 python -m personas_sim.run
 
 # 5. Quick creative add-on only: the psychographic axes vs demographic on Q1
 USE_MOCK=0 N=100 EXT_ONLY=1 python -m personas_sim.run
-# ...or one axis at a time (cheaper): AXIS in {political, openness, values}
+# ...one axis at a time (cheaper): AXIS in {political, openness, values}
 USE_MOCK=0 N=100 EXT_ONLY=1 AXIS=openness python -m personas_sim.run
+# ...the axes on the AI generality question instead of climate Q1
+USE_MOCK=0 N=100 EXT_ONLY=1 EXT_QUESTION=ai_llm_benefit python -m personas_sim.run
 ```
 
 Outputs: per-question + averaged tables (stdout), `results.json`, and

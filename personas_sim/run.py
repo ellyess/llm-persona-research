@@ -65,18 +65,32 @@ from .diagnostics import (
     CONCERNED_VALUES, SKEPTIC_VALUES,
 )
 
-# Psychographic axes for the Q1-only extension. Each adds ONE sentence to the
-# demographic prompt and is validated by a paired gradient (high-concern group
-# vs low-concern group) with a known expected POSITIVE direction. `attr` is the
-# persona field each axis splits on; `adds` is what the extra sentence conveys.
-AXES = [
-    {"method": "psychographic", "label": "political", "attr": "affiliation",
-     "high": CONCERNED_PARTIES, "low": SKEPTIC_PARTIES, "adds": "political identity"},
-    {"method": "openness", "label": "openness", "attr": "openness",
-     "high": HIGH_OPENNESS, "low": LOW_OPENNESS, "adds": "Big Five openness"},
-    {"method": "values", "label": "values", "attr": "values",
-     "high": CONCERNED_VALUES, "low": SKEPTIC_VALUES, "adds": "Schwartz dominant value"},
-]
+# Psychographic axes for the Q1-only extension, PER QUESTION. Each adds ONE
+# sentence to the demographic prompt and is validated by a paired gradient
+# (high- vs low-stance group) with a declared `expected` direction. The point
+# of making this per-question: the dominant axis is TOPIC-DEPENDENT. For climate
+# all three are expected positive; for AI, Openness is the pre-registered
+# winner (openness to new technology) while politics/values are EXPLORATORY (no
+# established AI direction -> reported, but no pass/fail claim).
+_AX_POLITICAL = {"method": "psychographic", "label": "political", "attr": "affiliation",
+                 "high": CONCERNED_PARTIES, "low": SKEPTIC_PARTIES, "adds": "political identity"}
+_AX_OPENNESS = {"method": "openness", "label": "openness", "attr": "openness",
+                "high": HIGH_OPENNESS, "low": LOW_OPENNESS, "adds": "Big Five openness"}
+_AX_VALUES = {"method": "values", "label": "values", "attr": "values",
+              "high": CONCERNED_VALUES, "low": SKEPTIC_VALUES, "adds": "Schwartz dominant value"}
+
+AXES_BY_QID = {
+    "personal_importance": [   # climate: all three expected positive
+        {**_AX_POLITICAL, "expected": "positive"},
+        {**_AX_OPENNESS,  "expected": "positive"},
+        {**_AX_VALUES,    "expected": "positive"},
+    ],
+    "ai_llm_benefit": [        # AI: openness is the expected winner; rest exploratory
+        {**_AX_OPENNESS,  "expected": "positive"},
+        {**_AX_POLITICAL, "expected": "exploratory"},
+        {**_AX_VALUES,    "expected": "exploratory"},
+    ],
+}
 
 # N is overridable via env so a quick smoke-run (e.g. N=20) does not require
 # editing code. Full reportable run is N=100 per the brief.
@@ -219,7 +233,7 @@ def run():
     ext = _axes_extension(
         first_q, persona_pool["demographic"], raw_first["demographic"])
 
-    averaged = _average_accuracy(per_question)
+    averaged = _average_by_topic(per_question)
 
     _report(per_question, averaged, consistency, gradients, dispersion, ext)
     _save(per_question, averaged, consistency, gradients, dispersion, ext)
@@ -229,58 +243,76 @@ def run():
             "axes_q1": ext}
 
 
-def _axes_extension(first_q, demo_personas, demo_answers):
-    """Run each psychographic axis method (politics/openness/values) on Q1 and,
-    for each, compute its paired gradient AND the `demographic` control gradient
-    (same split, axis NOT in the prompt -> should be flat). `demo_personas`/
-    `demo_answers` are reused from the main run so the control costs no extra
-    calls. An optional AXIS env var restricts to one axis for a cheaper run."""
+def _target_question():
+    """The question the psychographic-axes extension runs on. Defaults to the
+    first question; override with EXT_QUESTION=<id> (e.g. ai_llm_benefit)."""
+    qid = os.environ.get("EXT_QUESTION", QUESTIONS[0]["id"])
+    for q in QUESTIONS:
+        if q["id"] == qid:
+            return q
+    raise ValueError(f"EXT_QUESTION={qid!r} not in QUESTIONS")
+
+
+def _axes_extension(question, demo_personas, demo_answers):
+    """Run each psychographic axis method for `question` and, for each, compute
+    its paired gradient AND the `demographic` control gradient (same split, axis
+    NOT in the prompt -> should be flat). The axis set + each axis's expected
+    direction come from AXES_BY_QID, so the same machinery serves climate
+    (all expected positive) and AI (openness positive; politics/values
+    exploratory). `demo_personas`/`demo_answers` are reused so the control costs
+    no extra calls. An optional AXIS env var restricts to one axis."""
     only = os.environ.get("AXIS")
-    out = {"demographic_eval": evaluate(demo_answers, first_q), "axes": {}}
-    for ax in AXES:
+    axes = AXES_BY_QID.get(question["id"], [])
+    out = {"demographic_eval": evaluate(demo_answers, question), "axes": {}}
+    for ax in axes:
         if only and only not in (ax["label"], ax["method"]):
             continue
         personas = build_personas(N, method=ax["method"], seed=SEED)
-        answers = _collect_letters(personas, first_q)
+        answers = _collect_letters(personas, question)
         out["axes"][ax["label"]] = {
             "adds": ax["adds"],
-            "eval": evaluate(answers, first_q),
+            "expected": ax["expected"],
+            "eval": evaluate(answers, question),
             "gradient": axis_gradient(
-                personas, answers, first_q, ax["attr"], ax["high"], ax["low"]),
+                personas, answers, question, ax["attr"], ax["high"], ax["low"],
+                expected=ax["expected"]),
             "control_gradient": axis_gradient(
-                demo_personas, demo_answers, first_q, ax["attr"], ax["high"], ax["low"]),
+                demo_personas, demo_answers, question, ax["attr"], ax["high"],
+                ax["low"], expected=ax["expected"]),
         }
 
     # The composite ("kitchen-sink") persona stacks ALL axes at once. Only run it
     # when not filtering to a single axis. We score its accuracy and check that
     # every axis gradient still survives in the combined prompt.
-    if not only:
+    if not only and axes:
         comp_p = build_personas(N, method="composite", seed=SEED)
-        comp_a = _collect_letters(comp_p, first_q)
+        comp_a = _collect_letters(comp_p, question)
         out["composite"] = {
-            "eval": evaluate(comp_a, first_q),
+            "eval": evaluate(comp_a, question),
             "gradients": {
                 ax["label"]: axis_gradient(
-                    comp_p, comp_a, first_q, ax["attr"], ax["high"], ax["low"])
-                for ax in AXES
+                    comp_p, comp_a, question, ax["attr"], ax["high"], ax["low"],
+                    expected=ax["expected"])
+                for ax in axes
             },
         }
     return out
 
 
 def _run_extension_only():
-    """EXT_ONLY fast path: build the demographic control + each axis method,
-    collect Q1 answers, report, and write a SEPARATE results_psychographic.json
-    so the main results.json is untouched. Cost ~ (1 + n_axes) * N calls."""
-    first_q = QUESTIONS[0]
+    """EXT_ONLY fast path: build the demographic control + each axis method for
+    the target question (EXT_QUESTION, default Q1), report, and write a SEPARATE
+    results_psychographic.json so the main results.json is untouched.
+    Cost ~ (1 + n_axes + composite) * N calls."""
+    q = _target_question()
     demo_personas = build_personas(N, method="demographic", seed=SEED)
-    demo_answers = _collect_letters(demo_personas, first_q)
-    ext = _axes_extension(first_q, demo_personas, demo_answers)
+    demo_answers = _collect_letters(demo_personas, q)
+    ext = _axes_extension(q, demo_personas, demo_answers)
 
-    print(f"\n(EXT_ONLY: psychographic axes on Q1 only, N={N})")
-    _report_extension(first_q, ext)
+    print(f"\n(EXT_ONLY: psychographic axes on {q['id']} only, N={N})")
+    _report_extension(q, ext)
     with open("results_psychographic.json", "w") as f:
-        json.dump({"question": first_q["id"], "axes_q1": ext}, f, indent=2)
+        json.dump({"question": q["id"], "axes_q1": ext}, f, indent=2)
     print("wrote results_psychographic.json")
     return {"axes_q1": ext}
 
@@ -315,13 +347,27 @@ def _run_one_question(question, persona_pool):
     return evals, raw
 
 
-def _average_accuracy(per_question):
-    """Mean distribution accuracy per method across all questions."""
+def _topics():
+    """Distinct topic tags, in first-seen order (climate first, then ai)."""
+    seen = []
+    for q in QUESTIONS:
+        t = q.get("topic", "other")
+        if t not in seen:
+            seen.append(t)
+    return seen
+
+
+def _average_by_topic(per_question):
+    """Mean distribution accuracy per method, grouped BY TOPIC, so the climate
+    average stays comparable to earlier runs and the AI generality test is
+    reported on its own rather than blended in. Returns {topic: {method: avg}}."""
     out = {}
-    for m in METHODS:
-        accs = [per_question[q["id"]][m]["distribution_accuracy"]
-                for q in QUESTIONS]
-        out[m] = sum(accs) / len(accs) if accs else 0.0
+    for t in _topics():
+        qs = [q for q in QUESTIONS if q.get("topic", "other") == t]
+        out[t] = {}
+        for m in METHODS:
+            accs = [per_question[q["id"]][m]["distribution_accuracy"] for q in qs]
+            out[t][m] = sum(accs) / len(accs) if accs else 0.0
     return out
 
 
@@ -356,16 +402,28 @@ def _report(per_question, averaged, consistency, gradients, dispersion, ext=None
             ))
         print()
 
-    print("=== AVERAGED across questions ===")
-    print("    {:<13} {:>9}   {:>9}".format("method", "dist.acc%", "consist%"))
-    print("    " + "-" * 40)
-    for m in METHODS:
-        cons = consistency.get(m)
-        cons_s = f"{100 * cons:>7.1f}%" if cons is not None else "      --"
-        print("    {:<13} {:>8.1f}%   {}".format(m, 100 * averaged[m], cons_s))
-    best = max(averaged, key=averaged.get)
-    print(f"\n    Best avg accuracy: {best!r} ({100*averaged[best]:.1f}%, "
-          f"ceiling {HUMAN_CEILING:.0%})")
+    print("=== AVERAGED distribution accuracy, by topic ===")
+    first_qid = QUESTIONS[0]["id"]
+    for topic, per_m in averaged.items():
+        qs = [q for q in QUESTIONS if q.get("topic", "other") == topic]
+        # consistency was measured on the first question only; show it for the
+        # topic that contains it.
+        show_cons = any(q["id"] == first_qid for q in qs)
+        print(f"  topic: {topic} ({len(qs)} question{'s' if len(qs) != 1 else ''})")
+        hdr = "    {:<13} {:>9}".format("method", "dist.acc%")
+        if show_cons:
+            hdr += "   {:>9}".format("consist%")
+        print(hdr)
+        print("    " + "-" * (len(hdr) - 4))
+        for m in METHODS:
+            line = "    {:<13} {:>8.1f}%".format(m, 100 * per_m[m])
+            if show_cons:
+                cons = consistency.get(m)
+                line += "   " + (f"{100 * cons:>7.1f}%" if cons is not None
+                                 else "      --")
+            print(line)
+        best = max(per_m, key=per_m.get)
+        print(f"    best: {best!r} ({100 * per_m[best]:.1f}%)\n")
 
     # Age-gradient sub-group check
     fq = QUESTIONS[0]["id"]
@@ -403,14 +461,24 @@ def _report(per_question, averaged, consistency, gradients, dispersion, ext=None
         _report_extension(QUESTIONS[0], ext)
 
 
+def _grad_tag(g):
+    """Pass/fail tag honouring the axis's declared expectation: 'exploratory'
+    when there is no expected direction, 'n/a' when ungradable."""
+    if g.get("gradient") is None:
+        return "n/a"
+    if g.get("as_expected") is None:
+        return "exploratory"
+    return "YES" if g["as_expected"] else "no"
+
+
 def _report_extension(first_q, ext):
-    """Print the Q1-only psychographic-axes extension: each axis method's
-    accuracy vs the `demographic` control, then the paired gradient checks
-    (axis in-prompt vs demographic control) that show the axis is doing real
-    work, not leaking via correlated demographics."""
+    """Print the psychographic-axes extension for one question: each axis
+    method's accuracy vs the `demographic` control, then the paired gradient
+    checks (axis in-prompt vs demographic control) that show the axis is doing
+    real work, not leaking via correlated demographics."""
     letters = valid_letters(first_q)
     demo = ext["demographic_eval"]
-    print(f"\n=== Extension: psychographic axes (Q1 only: {first_q['id']}) ===")
+    print(f"\n=== Extension: psychographic axes ({first_q['id']}) ===")
     print("    each axis = the demographic prompt + ONE extra sentence; "
           "demographic is the control")
     print("    {:<16} {:>9} {:>6} {:>6}   distribution".format(
@@ -434,9 +502,9 @@ def _report_extension(first_q, ext):
             100 * r["peak"], dist))
         print("    (composite = demographic + all 3 axis sentences at once)")
 
-    print(f"\n=== Paired gradient checks on Q1 ({first_q['id']}) ===")
-    print("    expect POSITIVE when the axis IS in the prompt, ~flat for the "
-          "demographic control")
+    print(f"\n=== Paired gradient checks ({first_q['id']}) ===")
+    print("    axis in-prompt should match its expected direction; the "
+          "demographic control should be ~flat")
     print("    {:<14} {:>11} {:>11} {:>13}".format(
         "axis", "in-prompt", "control", "as_expected"))
     print("    " + "-" * 52)
@@ -444,22 +512,20 @@ def _report_extension(first_q, ext):
         g, c = a["gradient"], a["control_gradient"]
         gv = f"{g['gradient']:+.2f}" if g["gradient"] is not None else "n/a"
         cv = f"{c['gradient']:+.2f}" if c["gradient"] is not None else "n/a"
-        tag = "YES" if g.get("as_expected") else "no"
-        print("    {:<14} {:>11} {:>11} {:>13}".format(label, gv, cv, tag))
-    print("    (gradient = high-concern group minus low-concern group; "
-          "positive = expected)")
+        print("    {:<14} {:>11} {:>11} {:>13}".format(label, gv, cv, _grad_tag(g)))
+    print("    (gradient = high-stance group minus low-stance group; "
+          "'exploratory' = no pre-set direction for this topic)")
 
     if "composite" in ext:
-        print(f"\n=== Composite persona: do all 3 gradients survive together? "
-              f"(Q1) ===")
-        print("    all three axes in one prompt; each gradient should stay "
-              "positive")
+        print(f"\n=== Composite persona: do the gradients survive together? "
+              f"({first_q['id']}) ===")
+        print("    all axes in one prompt; each gradient should keep its "
+              "expected direction")
         print("    {:<14} {:>11} {:>13}".format("axis", "gradient", "as_expected"))
         print("    " + "-" * 40)
         for label, g in ext["composite"]["gradients"].items():
             gv = f"{g['gradient']:+.2f}" if g["gradient"] is not None else "n/a"
-            tag = "YES" if g.get("as_expected") else "no"
-            print("    {:<14} {:>11} {:>13}".format(label, gv, tag))
+            print("    {:<14} {:>11} {:>13}".format(label, gv, _grad_tag(g)))
 
 
 def _save(per_question, averaged, consistency, gradients, dispersion, ext=None):
@@ -471,7 +537,7 @@ def _save(per_question, averaged, consistency, gradients, dispersion, ext=None):
             for q in QUESTIONS
         ],
         "per_question": per_question,
-        "averaged_distribution_accuracy": averaged,
+        "averaged_distribution_accuracy_by_topic": averaged,
         "consistency_first_question": consistency,
         "age_gradient_q1": gradients,
         "elicited_dispersion_q1": dispersion,
@@ -520,15 +586,20 @@ def _plot(per_question, averaged):
         ax.set_title(f"{qid}: {question['text']}")
         ax.legend(fontsize=8, loc="upper right")
 
+    # Bottom subplot: averaged accuracy for the FIRST topic (climate), the
+    # headline set; `averaged` is now {topic: {method: avg}}.
     ax = axes[-1]
+    topic0 = next(iter(averaged))
+    avg0 = averaged[topic0]
+    n_topic_q = sum(1 for q in QUESTIONS if q.get("topic", "other") == topic0)
     methods = list(METHODS)
-    accs = [100 * averaged[m] for m in methods]
+    accs = [100 * avg0[m] for m in methods]
     ax.bar(methods, accs, color=COLORS[:len(methods)])
     ax.axhline(100 * HUMAN_CEILING, color="black", linestyle="--",
                label=f"Human ceiling ({100*HUMAN_CEILING:.0f}%)")
     ax.set_ylabel("avg distribution accuracy (%)")
     ax.set_ylim(0, 100)
-    ax.set_title(f"Averaged across {n_q} questions")
+    ax.set_title(f"Averaged across {n_topic_q} {topic0} questions")
     for m, a in zip(methods, accs):
         ax.text(m, a + 1, f"{a:.0f}%", ha="center", fontsize=9)
     ax.legend(fontsize=8)
