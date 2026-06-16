@@ -55,9 +55,9 @@ def total_variation(p: dict, q: dict) -> float:
 
 
 def distribution_accuracy(p: dict, q: dict) -> float:
-    """1 - TVD, in [0,1]. Matches the AS eval report's headline metric.
-    Scoring LM opinion *distributions* against real survey data follows the
-    OpinionQA methodology (Santurkar et al. 2023 -- see SOURCES.md)."""
+    """1 - TVD, in [0,1]. Scoring LM opinion *distributions* against real survey
+    data follows the OpinionQA methodology (Santurkar et al. 2023 -- see
+    SOURCES.md)."""
     return 1.0 - total_variation(p, q)
 
 

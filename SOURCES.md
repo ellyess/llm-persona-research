@@ -326,14 +326,15 @@ as one sentence and validated by a paired gradient
     **primary source for the human self-replication ceiling** (~91% on these survey
     items) that bounds achievable distribution accuracy: survey respondents change their
     own answer ~19% of the time on re-asking, so even a perfect simulator caps there.
-    Artificial Societies (below) and the "Stanford" framing cite this ceiling secondhand.
   - backs: `run.py:HUMAN_CEILING`.
 
-- **Artificial Societies, *Survey Eval Report* (Jan 2026).** https://societies.io
-  - Source of the "distribution accuracy + response consistency" metric framing used
-    throughout the harness, and of the finding that standard synthetic-persona
-    approaches plateau around 60–67% distribution accuracy across ~1,000 surveys. Also
-    where the ~91% human-replication ceiling above is cited (via Stanford).
+- **Prompt-based synthetic-persona plateau.** Independent prior work on
+  predicting survey-response distributions with prompted LLM personas reports
+  the same ceiling this study reproduces: prompt-engineering tops out well short
+  of human fidelity. See Suh et al. 2025 (SubPOP, below), who quantify the gap
+  and turn to fine-tuning. The "distribution accuracy" metric used here is just
+  `1 - TVD`, the standard OpinionQA-style scoring of LM opinion distributions
+  against real survey data (Santurkar et al. 2023).
 
 ---
 

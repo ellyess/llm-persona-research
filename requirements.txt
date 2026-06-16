@@ -1,3 +1,6 @@
-anthropic>=0.39
-matplotlib>=3.7
-numpy>=1.24
+# Pinned to the versions used to produce the committed results.
+# Python 3.11+ (Docker uses 3.11; developed on 3.12). These are the only
+# third-party dependencies; everything else is the standard library.
+anthropic==0.107.1
+matplotlib==3.9.2
+numpy==2.2.6

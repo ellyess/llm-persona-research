@@ -182,7 +182,7 @@ def _run_network(personas, question):
 def _banner():
     """Print which model produced this output, so a pasted result is never
     ambiguous about whether it was mock/Haiku/Sonnet."""
-    src = "MOCK (no API — illustrative only)" if USE_MOCK else f"model = {MODEL}"
+    src = "MOCK (no API, illustrative only)" if USE_MOCK else f"model = {MODEL}"
     print(f"\n[run config] {src}   N={N}   seed={SEED}", flush=True)
 
 

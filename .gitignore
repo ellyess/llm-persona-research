@@ -9,7 +9,7 @@ __pycache__/
 venv/
 env/
 
-# Secrets — never commit API keys
+# Secrets: never commit API keys
 .env
 *.key
 # api.py is a local scratch file holding a real ANTHROPIC_API_KEY
