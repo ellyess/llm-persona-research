@@ -105,24 +105,36 @@ def parse_distribution(reply: str, valid_letters):
 
 
 # --- Mock model: makes the pipeline runnable with no API key ------------------
-def _extract_politics(text: str):
-    """Detect a party lean from the persona text. Only the `psychographic`
-    prompt mentions a party, so `demographic` personas come back 'neutral' --
-    which is exactly what makes the political-gradient control come out flat."""
+# Keyword signals per direction, across all psychographic axes (party / Big Five
+# openness / Schwartz value). Net-counting these means the `composite` persona,
+# which carries all three clauses, aggregates its leans instead of picking the
+# first match -- while single-axis personas behave exactly as before (one hit).
+_CONCERNED_KEYWORDS = ("labour", "liberal democrat", "green party",
+                       "nationalist party", "intellectually curious",
+                       "fairness, equality")
+_SKEPTIC_KEYWORDS = ("conservative", "reform uk", "practical and conventional",
+                     "personal achievement, status")
+
+
+def _persona_lean(text: str):
+    """Net climate-concern lean from the psychographic clauses in the prompt.
+    `demographic` personas carry none, so they come back 'neutral' -- which is
+    exactly what makes every gradient control flat."""
     t = text.lower()
-    if ("labour" in t or "liberal democrat" in t or "green party" in t
-            or "nationalist party" in t):
+    concerned = sum(kw in t for kw in _CONCERNED_KEYWORDS)
+    skeptic = sum(kw in t for kw in _SKEPTIC_KEYWORDS)
+    if concerned > skeptic:
         return "concerned"
-    if "conservative" in t or "reform uk" in t:
+    if skeptic > concerned:
         return "skeptic"
     return "neutral"
 
 
 def _mock_weights(persona_text: str):
-    """Weights over the 5-letter space. Age makes an age gradient visible;
-    political lean (when present in the prompt) shifts climate-concern, so the
-    mock demonstrates the `psychographic` method and its gradient offline.
-    NOT meant to be realistic."""
+    """Weights over the 5-letter space. Age makes an age gradient visible; a
+    psychographic lean (political/openness/values, when present in the prompt)
+    shifts climate-concern, so the mock demonstrates each axis method and its
+    paired gradient offline. NOT meant to be realistic."""
     age = _extract_age(persona_text)
     if age is not None and age < 35:
         base = [0.30, 0.34, 0.24, 0.08, 0.04]    # younger: more "important"
@@ -131,10 +143,10 @@ def _mock_weights(persona_text: str):
     else:
         base = [0.22, 0.30, 0.30, 0.12, 0.06]
 
-    pol = _extract_politics(persona_text)
-    if pol == "concerned":
+    lean = _persona_lean(persona_text)
+    if lean == "concerned":
         mult = [1.7, 1.3, 0.9, 0.6, 0.5]         # shift toward A/B (concern)
-    elif pol == "skeptic":
+    elif lean == "skeptic":
         mult = [0.5, 0.8, 1.1, 1.5, 1.8]         # shift toward D/E (less)
     else:
         return base

@@ -59,7 +59,24 @@ from .personas import (
 )
 from .evaluate import evaluate, evaluate_distribution, valid_letters, peak
 from .consistency import measure_consistency
-from .diagnostics import age_gradient, persona_dispersion, political_gradient
+from .diagnostics import (
+    age_gradient, persona_dispersion, axis_gradient,
+    CONCERNED_PARTIES, SKEPTIC_PARTIES, HIGH_OPENNESS, LOW_OPENNESS,
+    CONCERNED_VALUES, SKEPTIC_VALUES,
+)
+
+# Psychographic axes for the Q1-only extension. Each adds ONE sentence to the
+# demographic prompt and is validated by a paired gradient (high-concern group
+# vs low-concern group) with a known expected POSITIVE direction. `attr` is the
+# persona field each axis splits on; `adds` is what the extra sentence conveys.
+AXES = [
+    {"method": "psychographic", "label": "political", "attr": "affiliation",
+     "high": CONCERNED_PARTIES, "low": SKEPTIC_PARTIES, "adds": "political identity"},
+    {"method": "openness", "label": "openness", "attr": "openness",
+     "high": HIGH_OPENNESS, "low": LOW_OPENNESS, "adds": "Big Five openness"},
+    {"method": "values", "label": "values", "attr": "values",
+     "high": CONCERNED_VALUES, "low": SKEPTIC_VALUES, "adds": "Schwartz dominant value"},
+]
 
 # N is overridable via env so a quick smoke-run (e.g. N=20) does not require
 # editing code. Full reportable run is N=100 per the brief.
@@ -196,10 +213,10 @@ def run():
     # distributions actually different, or is the model reciting one aggregate?
     dispersion = persona_dispersion(raw_first["elicited"])
 
-    # Q1-ONLY extension: the `psychographic` method (+ political gradient).
+    # Q1-ONLY extension: the psychographic axis methods (+ paired gradients).
     # Kept out of the main 5-method tables so the headline results are
     # unchanged; reported in its own block.
-    ext = _psychographic_extension(
+    ext = _axes_extension(
         first_q, persona_pool["demographic"], raw_first["demographic"])
 
     averaged = _average_accuracy(per_question)
@@ -209,41 +226,63 @@ def run():
     return {"per_question": per_question, "averaged": averaged,
             "consistency": consistency, "age_gradient_q1": gradients,
             "elicited_dispersion_q1": dispersion,
-            "psychographic_q1": ext}
+            "axes_q1": ext}
 
 
-def _psychographic_extension(first_q, demo_personas, demo_answers):
-    """Run the `psychographic` method on Q1 and compute the political-gradient
-    check for it AND for `demographic` (the control). Returns a dict used by
-    the report + JSON. `demo_personas`/`demo_answers` are reused from the main
-    run so the control costs no extra calls."""
-    psy_personas = build_personas(N, method="psychographic", seed=SEED)
-    psy_answers = _collect_letters(psy_personas, first_q)
-    return {
-        "demographic_eval": evaluate(demo_answers, first_q),
-        "psychographic_eval": evaluate(psy_answers, first_q),
-        "political_gradient": {
-            "demographic": political_gradient(demo_personas, demo_answers, first_q),
-            "psychographic": political_gradient(psy_personas, psy_answers, first_q),
-        },
-    }
+def _axes_extension(first_q, demo_personas, demo_answers):
+    """Run each psychographic axis method (politics/openness/values) on Q1 and,
+    for each, compute its paired gradient AND the `demographic` control gradient
+    (same split, axis NOT in the prompt -> should be flat). `demo_personas`/
+    `demo_answers` are reused from the main run so the control costs no extra
+    calls. An optional AXIS env var restricts to one axis for a cheaper run."""
+    only = os.environ.get("AXIS")
+    out = {"demographic_eval": evaluate(demo_answers, first_q), "axes": {}}
+    for ax in AXES:
+        if only and only not in (ax["label"], ax["method"]):
+            continue
+        personas = build_personas(N, method=ax["method"], seed=SEED)
+        answers = _collect_letters(personas, first_q)
+        out["axes"][ax["label"]] = {
+            "adds": ax["adds"],
+            "eval": evaluate(answers, first_q),
+            "gradient": axis_gradient(
+                personas, answers, first_q, ax["attr"], ax["high"], ax["low"]),
+            "control_gradient": axis_gradient(
+                demo_personas, demo_answers, first_q, ax["attr"], ax["high"], ax["low"]),
+        }
+
+    # The composite ("kitchen-sink") persona stacks ALL axes at once. Only run it
+    # when not filtering to a single axis. We score its accuracy and check that
+    # every axis gradient still survives in the combined prompt.
+    if not only:
+        comp_p = build_personas(N, method="composite", seed=SEED)
+        comp_a = _collect_letters(comp_p, first_q)
+        out["composite"] = {
+            "eval": evaluate(comp_a, first_q),
+            "gradients": {
+                ax["label"]: axis_gradient(
+                    comp_p, comp_a, first_q, ax["attr"], ax["high"], ax["low"])
+                for ax in AXES
+            },
+        }
+    return out
 
 
 def _run_extension_only():
-    """EXT_ONLY fast path: build demographic + psychographic pools, collect Q1
-    answers for both (~2*N calls), report the extension, and write a SEPARATE
-    results_psychographic.json so the main results.json is untouched."""
+    """EXT_ONLY fast path: build the demographic control + each axis method,
+    collect Q1 answers, report, and write a SEPARATE results_psychographic.json
+    so the main results.json is untouched. Cost ~ (1 + n_axes) * N calls."""
     first_q = QUESTIONS[0]
     demo_personas = build_personas(N, method="demographic", seed=SEED)
     demo_answers = _collect_letters(demo_personas, first_q)
-    ext = _psychographic_extension(first_q, demo_personas, demo_answers)
+    ext = _axes_extension(first_q, demo_personas, demo_answers)
 
-    print(f"\n(EXT_ONLY: psychographic extension on Q1 only, N={N})")
+    print(f"\n(EXT_ONLY: psychographic axes on Q1 only, N={N})")
     _report_extension(first_q, ext)
     with open("results_psychographic.json", "w") as f:
-        json.dump({"question": first_q["id"], "psychographic_q1": ext}, f, indent=2)
+        json.dump({"question": first_q["id"], "axes_q1": ext}, f, indent=2)
     print("wrote results_psychographic.json")
-    return {"psychographic_q1": ext}
+    return {"axes_q1": ext}
 
 
 def _run_one_question(question, persona_pool):
@@ -365,41 +404,62 @@ def _report(per_question, averaged, consistency, gradients, dispersion, ext=None
 
 
 def _report_extension(first_q, ext):
-    """Print the Q1-only `psychographic` extension: accuracy vs the
-    `demographic` control, and the political-gradient money shot."""
+    """Print the Q1-only psychographic-axes extension: each axis method's
+    accuracy vs the `demographic` control, then the paired gradient checks
+    (axis in-prompt vs demographic control) that show the axis is doing real
+    work, not leaking via correlated demographics."""
     letters = valid_letters(first_q)
-    print(f"\n=== Extension: psychographic method (Q1 only: {first_q['id']}) ===")
-    print("    demographic (no politics) vs psychographic (+ political identity)")
-    print("    {:<14} {:>9} {:>6} {:>6}   distribution".format(
+    demo = ext["demographic_eval"]
+    print(f"\n=== Extension: psychographic axes (Q1 only: {first_q['id']}) ===")
+    print("    each axis = the demographic prompt + ONE extra sentence; "
+          "demographic is the control")
+    print("    {:<16} {:>9} {:>6} {:>6}   distribution".format(
         "method", "dist.acc%", "JSD", "peak%"))
-    print("    " + "-" * 80)
-    for name, key in (("demographic", "demographic_eval"),
-                      ("psychographic", "psychographic_eval")):
-        r = ext[key]
+    print("    " + "-" * 84)
+    demo_dist = "  ".join(f"{k}={demo['distribution'][k]:.2f}" for k in letters)
+    print("    {:<16} {:>8.1f}% {:>6.3f} {:>5.0f}%   {}".format(
+        "demographic", 100 * demo["distribution_accuracy"], demo["jsd"],
+        100 * demo["peak"], demo_dist))
+    for label, a in ext["axes"].items():
+        r = a["eval"]
         dist = "  ".join(f"{k}={r['distribution'][k]:.2f}" for k in letters)
-        print("    {:<14} {:>8.1f}% {:>6.3f} {:>5.0f}%   {}".format(
-            name, 100 * r["distribution_accuracy"], r["jsd"],
+        print("    {:<16} {:>8.1f}% {:>6.3f} {:>5.0f}%   {}".format(
+            label, 100 * r["distribution_accuracy"], r["jsd"],
             100 * r["peak"], dist))
+    if "composite" in ext:
+        r = ext["composite"]["eval"]
+        dist = "  ".join(f"{k}={r['distribution'][k]:.2f}" for k in letters)
+        print("    {:<16} {:>8.1f}% {:>6.3f} {:>5.0f}%   {}".format(
+            "composite", 100 * r["distribution_accuracy"], r["jsd"],
+            100 * r["peak"], dist))
+        print("    (composite = demographic + all 3 axis sentences at once)")
 
-    print(f"\n=== Political-gradient check on Q1 ({first_q['id']}) ===")
-    print("    climate-progressive-party voters are really MORE concerned ->")
-    print("    expect POSITIVE for psychographic, ~flat for demographic (control)")
-    print("    {:<14} {:>9} {:>9} {:>10} {:>12}".format(
-        "method", "progress.", "skeptic", "gradient", "as_expected"))
-    print("    " + "-" * 58)
-    for m in ("demographic", "psychographic"):
-        g = ext["political_gradient"][m]
-        if g["gradient"] is None:
-            print("    {:<14} {:>9} {:>9} {:>10} {:>12}".format(
-                m, "--", "--", "--", "n/a"))
-            continue
-        tag = "YES" if g["as_expected"] else "no"
-        if m == "demographic":
-            tag += " (ctrl)"
-        print("    {:<14} {:>9.2f} {:>9.2f} {:>+10.2f} {:>12}".format(
-            m, g["green_mean"], g["right_mean"], g["gradient"], tag))
-    print("    (concern score: higher = more concerned; "
-          "gradient = progressive - skeptic)")
+    print(f"\n=== Paired gradient checks on Q1 ({first_q['id']}) ===")
+    print("    expect POSITIVE when the axis IS in the prompt, ~flat for the "
+          "demographic control")
+    print("    {:<14} {:>11} {:>11} {:>13}".format(
+        "axis", "in-prompt", "control", "as_expected"))
+    print("    " + "-" * 52)
+    for label, a in ext["axes"].items():
+        g, c = a["gradient"], a["control_gradient"]
+        gv = f"{g['gradient']:+.2f}" if g["gradient"] is not None else "n/a"
+        cv = f"{c['gradient']:+.2f}" if c["gradient"] is not None else "n/a"
+        tag = "YES" if g.get("as_expected") else "no"
+        print("    {:<14} {:>11} {:>11} {:>13}".format(label, gv, cv, tag))
+    print("    (gradient = high-concern group minus low-concern group; "
+          "positive = expected)")
+
+    if "composite" in ext:
+        print(f"\n=== Composite persona: do all 3 gradients survive together? "
+              f"(Q1) ===")
+        print("    all three axes in one prompt; each gradient should stay "
+              "positive")
+        print("    {:<14} {:>11} {:>13}".format("axis", "gradient", "as_expected"))
+        print("    " + "-" * 40)
+        for label, g in ext["composite"]["gradients"].items():
+            gv = f"{g['gradient']:+.2f}" if g["gradient"] is not None else "n/a"
+            tag = "YES" if g.get("as_expected") else "no"
+            print("    {:<14} {:>11} {:>13}".format(label, gv, tag))
 
 
 def _save(per_question, averaged, consistency, gradients, dispersion, ext=None):
@@ -415,7 +475,7 @@ def _save(per_question, averaged, consistency, gradients, dispersion, ext=None):
         "consistency_first_question": consistency,
         "age_gradient_q1": gradients,
         "elicited_dispersion_q1": dispersion,
-        "psychographic_q1": ext,
+        "axes_q1": ext,
     }
     with open("results.json", "w") as f:
         json.dump(out, f, indent=2)

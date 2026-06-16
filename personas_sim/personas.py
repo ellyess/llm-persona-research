@@ -12,7 +12,7 @@ A baseline (no persona at all) lives in run.py, not here.
 
 import random
 
-from .config import DEMOGRAPHICS, POLITICS
+from .config import DEMOGRAPHICS, POLITICS, OPENNESS, VALUES
 
 # Which demographic attributes are sampled and written into persona prompts.
 # This is the "silicon sampling" approach -- condition the model on demographics
@@ -73,6 +73,22 @@ _POLITICS_PHRASE = {
     "SNP / Plaid / other":      "Politically you support a smaller or nationalist party.",
     "no firm party allegiance": "You don't have a firm political allegiance.",
 }
+# Big Five openness sentence for the `openness` method. Deliberately says nothing
+# about climate or the environment, so any climate-concern shift is a genuine
+# downstream effect of the trait, not a restatement of the outcome.
+_OPENNESS_PHRASE = {
+    "high openness":    "You're intellectually curious, imaginative, and drawn to new ideas and experiences.",
+    "average openness": "You're moderately open to new ideas, while also valuing the familiar.",
+    "low openness":     "You're practical and conventional, and you prefer the familiar to the untried.",
+}
+# Schwartz dominant-value sentence for the `values` method. Also avoids any
+# environment wording, for the same reason.
+_VALUES_PHRASE = {
+    "self-transcendence": "What matters most to you is fairness, equality, and the wellbeing of other people.",
+    "conservation":       "What matters most to you is security, tradition, and social stability.",
+    "openness to change": "What matters most to you is independence, novelty, and the freedom to choose your own path.",
+    "self-enhancement":   "What matters most to you is personal achievement, status, and getting ahead.",
+}
 
 
 def _clean_dist(dist: dict) -> dict:
@@ -97,32 +113,42 @@ def _age_from_generation(generation: str, rng: random.Random) -> int:
     return rng.randint(lo, hi)
 
 
-def _sample_affiliation(rng: random.Random) -> str:
-    dist = _clean_dist(POLITICS)
-    cats, probs = list(dist.keys()), list(dist.values())
+def _sample_from(dist: dict, rng: random.Random) -> str:
+    d = _clean_dist(dist)
+    cats, probs = list(d.keys()), list(d.values())
     return rng.choices(cats, weights=probs)[0]
 
 
 def build_personas(n: int, method: str = "demographic", seed: int = 0):
-    """Return a list of n dicts: {attributes, age, affiliation, system_prompt}.
+    """Return a list of n dicts: {attributes, age, affiliation, openness, values,
+    system_prompt}.
 
-    Political affiliation is drawn from a SEPARATE RNG stream (seed + 1) so the
-    demographic draws -- and therefore every existing method's personas and
-    numbers -- stay byte-identical to before this axis existed. Affiliation is
-    stored on every persona for the political-gradient diagnostic, but only the
-    `psychographic` prompt actually mentions it."""
+    The three psychographic axes (affiliation, openness, values) are each drawn
+    from a SEPARATE RNG stream (seed + 1/2/3) so the demographic draws -- and
+    therefore every existing method's personas and numbers -- stay byte-identical
+    to before these axes existed. All three are stored on every persona for the
+    paired-gradient diagnostics, but each is only mentioned in the prompt of its
+    own method (`psychographic`/`openness`/`values`)."""
     rng = random.Random(seed)
     pol_rng = random.Random(seed + 1)
+    open_rng = random.Random(seed + 2)
+    val_rng = random.Random(seed + 3)
     personas = []
     for _ in range(n):
         attrs = _sample_attributes(rng)
         age = _age_from_generation(attrs["generation"], rng)
-        affiliation = _sample_affiliation(pol_rng)
+        affiliation = _sample_from(POLITICS, pol_rng)
+        openness = _sample_from(OPENNESS, open_rng)
+        values = _sample_from(VALUES, val_rng)
         attrs["affiliation"] = affiliation
+        attrs["openness"] = openness
+        attrs["values"] = values
         personas.append({
             "attributes": attrs,
             "age": age,
             "affiliation": affiliation,
+            "openness": openness,
+            "values": values,
             "system_prompt": _make_prompt(attrs, age, method),
         })
     return personas
@@ -153,26 +179,41 @@ _ANTISYC = (
 )
 
 
+def _axis_prompt(desc: str, clause: str = "") -> str:
+    """Factual persona prompt, optionally plus ONE psychographic clause. With
+    clause="" this is exactly the `demographic` prompt, so the only thing an
+    axis method changes is that one sentence -- a clean controlled comparison."""
+    mid = f" {clause}" if clause else ""
+    return (f"You are {desc}.{mid} "
+            f"Answer the survey question as this person would." + _ANTISYC)
+
+
 def _make_prompt(attrs: dict, age: int, method: str) -> str:
     desc = _describe(attrs, age)
 
     if method == "demographic":
-        return (
-            f"You are {desc}. "
-            f"Answer the survey question as this person would." + _ANTISYC
-        )
+        return _axis_prompt(desc)
 
-    if method == "psychographic":
-        # = `demographic` + ONE political-identity sentence. Politics is the
-        # strongest UK climate-attitude driver absent from the Yale demographics
-        # (psychographics beyond demographics; see SOURCES.md). The political
-        # clause is the only thing that differs from `demographic`, so any
-        # change in the distribution is attributable to that axis.
-        pol = _POLITICS_PHRASE.get(attrs.get("affiliation"), "")
-        return (
-            f"You are {desc}. {pol} "
-            f"Answer the survey question as this person would." + _ANTISYC
-        )
+    # Psychographic axes: demographic prompt + ONE extra sentence. Each axis
+    # adds a driver the Yale demographics miss, and is validated by a paired
+    # gradient with a KNOWN expected direction (see diagnostics.py, SOURCES.md).
+    if method == "psychographic":   # political identity (strongest UK driver)
+        return _axis_prompt(desc, _POLITICS_PHRASE.get(attrs.get("affiliation"), ""))
+    if method == "openness":        # Big Five openness
+        return _axis_prompt(desc, _OPENNESS_PHRASE.get(attrs.get("openness"), ""))
+    if method == "values":          # Schwartz dominant value
+        return _axis_prompt(desc, _VALUES_PHRASE.get(attrs.get("values"), ""))
+
+    if method == "composite":
+        # The "kitchen-sink" persona: demographic base + ALL THREE psychographic
+        # clauses at once. Tests whether the per-axis gains stack or saturate,
+        # and whether all three sub-group gradients survive together.
+        clause = " ".join(c for c in (
+            _POLITICS_PHRASE.get(attrs.get("affiliation"), ""),
+            _OPENNESS_PHRASE.get(attrs.get("openness"), ""),
+            _VALUES_PHRASE.get(attrs.get("values"), ""),
+        ) if c)
+        return _axis_prompt(desc, clause)
 
     if method == "rich":
         return (

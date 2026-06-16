@@ -181,3 +181,42 @@ POLITICS = {
     "SNP / Plaid / other":       0.04,
     "no firm party allegiance":  0.15,
 }
+
+
+#########################################################
+# PSYCHOLOGICAL AXES  (openness, values -- further psychographic inputs)
+#########################################################
+#
+# Two more axes, added the same way as POLITICS: sample a level, add ONE
+# sentence to the prompt, and validate with a paired gradient that has a KNOWN
+# expected direction. The expected direction is the whole point -- it is what
+# makes the gradient a real test rather than a vibe.
+#
+# WHY NOT MBTI: tempting, but it fails this bar. Myers-Briggs has poor
+# test-retest reliability and no established link to climate attitudes, so its
+# gradient would have no expected sign to check against. Big Five openness and
+# Schwartz values are evidence-based and directional. See SOURCES.md.
+#
+# These are modelling inputs (approximate marginals), not single-source Yale
+# numbers -- the rigour lives in the directional gradient, not the marginal.
+
+# Big Five Openness, banded into tertiles (the trait is ~normally distributed).
+# Expected: higher openness -> MORE climate-concerned (Soutter et al. 2020;
+# Hirsh 2010).
+OPENNESS = {
+    "high openness":    0.33,
+    "average openness": 0.34,
+    "low openness":     0.33,
+}
+
+# Schwartz higher-order values: the persona's dominant value orientation.
+# Expected: self-transcendence (universalism/benevolence) -> MORE concerned;
+# self-enhancement (power/achievement) -> LESS (Schwartz 1992; Stern 2000).
+# Illustrative marginal in the style of European Social Survey value priorities
+# (self-transcendence typically highest, self-enhancement lowest on average).
+VALUES = {
+    "self-transcendence": 0.32,
+    "conservation":       0.30,
+    "openness to change": 0.22,
+    "self-enhancement":   0.16,
+}

@@ -59,36 +59,58 @@ apart. Full numbers print to stdout and `results.json`; see
 [NOTES.md](NOTES.md) for the reasoning behind every choice. *(N=100, no
 bootstrap CI yet; see limitations.)*
 
-### Psychographic extension: one sentence breaks the plateau (Sonnet, Q1)
+### Psychographic axes: one sentence breaks the plateau (Sonnet, Q1)
 
-The 5 methods above all condition on *demographics only*. The `psychographic`
-method adds **one sentence of political identity** (UK party lean) to the
-`demographic` prompt; nothing else changes. On `claude-sonnet-4-6`, Q1:
+The 5 methods above all condition on *demographics only*. Each axis method adds
+**one extra sentence** for an attitudinal driver the demographics miss;
+`composite` adds all three at once. Nothing else changes. On
+`claude-sonnet-4-6`, Q1 (ground-truth peak 30%):
 
-| method | accuracy | peak (truth 30%) | political gradient |
+| method | accuracy | peak | gradient (in-prompt vs control) |
 |--------|:---:|:---:|:---:|
-| demographic (control) | 72.5% | 57%, collapsed onto "Very important" | **+0.02 (flat)** |
-| **psychographic** | **89.5%** | **35%, near truth** | **+1.70 (steep)** |
+| demographic (control) | 72.5% | 55%, collapsed onto "Very important" | n/a |
+| **political** | **91.5%** | 32%, near truth | **+1.77** vs +0.08 |
+| values | 78.5% | 37% | **+1.65** vs −0.09 |
+| openness | 77.5% | 41% | **+1.30** vs −0.08 |
+| composite (all 3) | 80.5% | 37% | see below |
 
-Two things happen at once, and the second is what makes it rigorous:
+Three findings, and the third is the surprise:
 
-1. **One psychographic sentence lifts accuracy +17 points and roughly halves
-   mode collapse**, even on Sonnet, which already collapses *less* than Haiku.
-   Demographic-only personas funnel onto the safe central answer; adding the
-   political axis pulls progressive and skeptic personas apart, recovering the
-   true spread (peak 35% vs truth 30%). At 89.5% it's nudging the 91% ceiling.
-2. **The control proves the axis is doing the work.** The political concern
-   gradient is **+1.70 with politics in the prompt vs +0.02 without**: same
-   personas, same run, the political sentence the only difference. So the
-   gradient is genuinely *caused* by the conditioning, not leaking in via
-   correlated demographics.
+1. **All three axes induce genuine, validated sub-group structure.** Every
+   in-prompt gradient is strongly positive while every demographic control is
+   flat (same personas, same run, the one extra sentence the only difference).
+   So the political win is not a fluke of politics: adding *any* evidence-based
+   attitudinal axis reliably makes the personas individuate in the right
+   direction, and the paired control proves it each time. The political axis
+   alone lifts accuracy +19 points and roughly halves mode collapse (peak 55% →
+   32%, near the true 30%), nudging the 91% ceiling.
+2. **A strong gradient does not guarantee the best marginal.** Values has almost
+   the same gradient as politics (+1.65 vs +1.77) but a far smaller accuracy
+   gain (+6 vs +19). The gradient measures whether the axis moves concern in the
+   right *direction*; the marginal accuracy depends on how well that trait's
+   *population distribution* maps onto this question's real answer distribution.
+   Party identity maps closest to UK climate opinion, so it wins on accuracy.
+   Having both diagnostics is what separates "is the axis real?" from "does it
+   improve the aggregate?"
+3. **Stacking does NOT compound; the kitchen sink is worse than the best single
+   axis.** `composite` (80.5%) lands *below* `political` (91.5%) and near the
+   weaker axes: blending in the differently-shaped openness/values signals
+   dilutes the clean political one (composite inherits values' over-spreading
+   into D = 0.25 vs truth 0.13). And the composite's gradients survive
+   **unequally** (political +1.33, openness +1.13, **values +0.06, collapsed**
+   from +1.65): when axes compete in one prompt, the model keeps the cues it
+   weights most and effectively drops the weakest. So combining axes doesn't
+   just dilute accuracy, it changes *which* structure the persona encodes. The
+   practical lesson: find the single axis that best maps to your target outcome
+   and use it; don't pile on.
 
 This sharpens the headline: the synthetic-persona plateau isn't a hard ceiling;
-it's partly an artifact of conditioning on **demographics only**. Add the one
-psychographic axis those demographics miss and accuracy jumps to ~90% **with**
-validated sub-group structure, unlike `elicited`, which hits the marginal by
-reciting it. *(Caveat: Q1 only, single run, GE2024 is a second data source;
-see [SOURCES.md](SOURCES.md) and limitations.)*
+it's partly an artifact of conditioning on **demographics only**. Add *the right*
+validated psychographic axis those demographics miss and the population
+de-collapses with real sub-group structure, unlike `elicited`, which hits the
+marginal by reciting it. *(Caveat: Q1 only, single run with ~3pt of LLM sampling
+noise, and the openness/values marginals are approximate modelling inputs; see
+[SOURCES.md](SOURCES.md) and limitations.)*
 
 ### Why this is a market-research problem
 
@@ -166,16 +188,31 @@ Methods 4 and 5 are first-principles attempts at the two things that report says
 are missing: social dynamics (network) and honest within-person uncertainty
 (elicited).
 
-**A 6th method, `psychographic` *(Q1-only extension)*.** Every method above
-conditions on *demographics* only, the textbook silicon-sampling recipe.
-`psychographic` = the `demographic` prompt **plus one political-identity
-sentence** (UK party lean, sampled from 2024 GE vote shares). Political identity
-is the strongest UK climate-attitude driver the Yale demographics lack. The
-political clause is the *only* thing that differs from `demographic`, so it's a
-clean test of whether a psychographic axis adds signal. It runs on Q1 only (a
-cheap creative add-on) and is reported in its own block; the headline 5-method
-results are untouched. *(This introduces a second data source; see
-[SOURCES.md](SOURCES.md).)*
+**Psychographic axes *(Q1-only extensions)*.** Every method above conditions on
+*demographics* only, the textbook silicon-sampling recipe. The extension adds
+three methods that each take the `demographic` prompt and append **one extra
+sentence** for an attitudinal driver the demographics miss:
+
+- `psychographic`: UK political identity (party lean, from 2024 GE vote shares).
+- `openness`: Big Five Openness level (intellectually curious vs practical).
+- `values`: Schwartz dominant value (self-transcendence vs self-enhancement).
+
+The extra sentence is the *only* thing that differs from `demographic`, so each
+is a clean test of whether that axis adds signal. Each is validated by a
+**paired gradient with a known expected direction** (see Evaluation), and each
+runs on Q1 only as a cheap add-on in its own block, so the headline 5-method
+results are untouched. They share a small `AXES` registry, so adding a fourth
+axis is a few lines.
+
+A `composite` method then **stacks all three axes** on one persona (demographic
+base + all three sentences) to ask whether the per-axis gains *stack or
+saturate*, and whether all three sub-group gradients survive together or
+interfere. (They survive but attenuate: splitting a composite persona on one
+axis leaves the other two as within-group noise, diluting each gradient.) *(I considered a personality typology like MBTI but
+rejected it: it has poor reliability and no established link to climate
+attitudes, so its gradient would have no expected sign to validate against.
+Openness and Schwartz values are evidence-based and directional. This also
+introduces extra data sources beyond Yale; see [SOURCES.md](SOURCES.md).)*
 
 **Anti-sycophancy framing.** Every persona prompt also carries an explicit
 "there are no right answers, many people genuinely disagree, don't hedge"
@@ -230,13 +267,15 @@ still average to roughly the right distribution. So I report:
   and recitation can't generalise to a question with no published answer. This
   is what stops a ceiling-beating `elicited` score from being mistaken for
   fidelity.
-- **Political-gradient check** *(automated; pairs with `psychographic`)*: in
-  real UK data, climate-progressive-party voters are more concerned than
-  skeptic-party voters. The harness computes this gradient for `psychographic`
-  (politics **in** the prompt, expect clearly positive) **and** for
-  `demographic` as a **control** (politics **not** in the prompt, expect
-  ≈flat). Positive where conditioned, flat where not = proof the political axis
-  is actually driving the answers, not leaking in elsewhere.
+- **Paired axis-gradient checks** *(automated; one per psychographic axis)*: for
+  each axis there is a known real-world direction (climate-progressive voters,
+  higher-openness people, and self-transcendent people are all more concerned).
+  The harness computes the gradient with the axis **in** the prompt (expect
+  clearly positive) **and** for `demographic` as a **control** with the axis
+  **out** of the prompt (expect ≈flat). Positive where conditioned, flat where
+  not = proof the axis is actually driving the answers, not leaking in via
+  correlated demographics. The known expected sign is what makes this a real
+  test, and it's exactly why MBTI was rejected (no expected sign to check).
 
 **Human-replication ceiling.** Real respondents change their own answer
 ~19% of the time on re-asking (Stanford), so even a perfect simulator caps
@@ -262,8 +301,10 @@ USE_MOCK=1 python -m personas_sim.run
 export ANTHROPIC_API_KEY=sk-ant-...
 USE_MOCK=0 python -m personas_sim.run
 
-# 5. Quick creative add-on only: psychographic vs demographic on Q1 (~2*N calls)
+# 5. Quick creative add-on only: the psychographic axes vs demographic on Q1
 USE_MOCK=0 N=100 EXT_ONLY=1 python -m personas_sim.run
+# ...or one axis at a time (cheaper): AXIS in {political, openness, values}
+USE_MOCK=0 N=100 EXT_ONLY=1 AXIS=openness python -m personas_sim.run
 ```
 
 Outputs: per-question + averaged tables (stdout), `results.json`, and
@@ -273,11 +314,12 @@ results untouched.
 
 **Cost / runtime.** Per question the full run makes 100 baseline + 100
 demographic + 100 rich + 200 network + 100 elicited = 600 calls. Across 3
-questions that's ~1,800 calls, + ~150 consistency + 100 for the Q1 psychographic
-extension, about **2,050 calls total**. With `claude-haiku-4-5` (set in
-[llm.py](personas_sim/llm.py)) expect roughly 20–35 minutes sequential; override
-with `MODEL=claude-sonnet-4-6` for higher fidelity, or `N=20` for a quick look.
-The `EXT_ONLY=1` fast path is ~200 calls (a few minutes).
+questions that's ~1,800 calls, + ~150 consistency + 400 for the Q1 psychographic
+axes (3 axes + composite), about **2,350 calls total**. With `claude-haiku-4-5`
+(set in [llm.py](personas_sim/llm.py)) expect roughly 20–40 minutes sequential;
+override with `MODEL=claude-sonnet-4-6` for higher fidelity, or `N=20` for a
+quick look. The `EXT_ONLY=1` fast path is ~500 calls at N=100 (demographic + 3
+axes + composite); `AXIS=` runs just one axis (skips composite).
 
 ## Structure
 
@@ -285,7 +327,7 @@ The `EXT_ONLY=1` fast path is ~200 calls (a few minutes).
 personas_sim/
   config.py        # questions, ground truths, demographics + POLITICS (Yale + GE2024)
   llm.py           # ask_persona() + parse_letter() + parse_distribution()
-  personas.py      # build personas (demographic/rich/network/elicited/psychographic)
+  personas.py      # build personas (demographic/rich/network/elicited + axes: psychographic/openness/values)
   evaluate.py      # accuracy / JSD / peak / entropy; hard-vote & soft-dist paths
   consistency.py   # within-persona stability across question rephrasings
   diagnostics.py   # age-gradient, persona-dispersion, political-gradient checks
@@ -366,13 +408,16 @@ ties to something the results already hint at.
    method can get to AS's 2M real-world profiles, and it attacks the failure the
    dispersion diagnostic exposed: personas reciting an aggregate instead of
    holding distinct, grounded views.
-2. **A psychographic stack, not just politics.** One political sentence moved Q1
-   accuracy +17 points, so the obvious follow-up is to add the other attitudinal
-   axes demographics miss: Schwartz basic values, media diet, religiosity,
-   urban/rural, and concrete behavioural anchors ("hasn't flown in three years",
-   "drives a diesel", "shops at Aldi"). Behaviour constrains opinion far more
-   tightly than demographics, and each axis can be validated with its own paired
-   gradient, exactly as politics was.
+2. **A psychographic stack, not just politics** *(partly done)*. One political
+   sentence moved Q1 accuracy +17 points, so I generalised the axis framework
+   and added two more validated axes: **Big Five Openness** and **Schwartz
+   values** (each with its own paired gradient). The natural next axes are media
+   diet, religiosity, urban/rural, and concrete behavioural anchors ("hasn't
+   flown in three years", "drives a diesel", "shops at Aldi"); behaviour
+   constrains opinion more tightly than demographics. The `composite` method
+   already *combines* all three axes in one persona; the open question is
+   whether a richer stack keeps stacking or saturates, and how to disentangle
+   the gradients once axes are combined.
 3. **Joint sampling from real microdata.** Personas are currently drawn from
    independent marginals, which produces implausible combinations. With the raw
    CCBM respondent rows (available on request from YPCCC) I'd sample real

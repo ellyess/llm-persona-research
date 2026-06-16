@@ -134,6 +134,39 @@ allegiance"` is excluded. This is a climate-concern proxy, not a strict
 left–right axis (e.g. the Lib Dems are centrist but climate-progressive).
 
 ---
+
+## 5. Psychological axes: openness and values (further inputs)
+
+Two more psychographic axes (`config.py` → `OPENNESS`, `VALUES`) powering the
+`openness` and `values` methods. Like `POLITICS`, these are **modelling
+inputs**, not single-source Yale numbers. The rigour is in the gradient's
+**known expected direction**, not in the marginal.
+
+- **`OPENNESS`** (Big Five). Banded into tertiles (high / average / low), since
+  the trait is roughly normally distributed; the marginal is an approximation,
+  not a measured UK statistic. Expected gradient: higher openness → more
+  climate concern (Soutter et al. 2020; Hirsh 2010).
+- **`VALUES`** (Schwartz higher-order values). An illustrative marginal in the
+  style of European Social Survey value priorities (self-transcendence tends to
+  rank highest, self-enhancement lowest). Expected gradient: self-transcendence
+  → more concern, self-enhancement → less (Schwartz 1992; Stern 2000).
+
+Gradient groupings (`diagnostics.py`): openness high = `high openness`, low =
+`low openness` (average excluded); values high = `self-transcendence`, low =
+`self-enhancement` (`conservation` and `openness to change` excluded as
+ambiguous for climate). The persona clauses deliberately avoid any
+environment/climate wording, so a concern shift is a genuine downstream effect
+of the trait, not a restatement of the outcome.
+
+**Why not MBTI.** I considered a Myers-Briggs axis and rejected it: MBTI has
+poor test-retest reliability and the dichotomous types lack empirical support,
+and there is no established MBTI → climate-attitude relationship. Without an
+evidence-based expected direction, its paired gradient would have no sign to
+validate against, which is the bar every other axis here meets. Big Five
+openness and Schwartz values are the psychometrically grounded, directional
+alternatives.
+
+---
 ---
 
 # Part 2: References, the literature behind the design choices
@@ -186,18 +219,43 @@ left–right axis (e.g. the Lib Dems are centrist but climate-progressive).
   - backs: the two-round discussion design (`personas.py:opinion_prompt`,
     `question_block_after_discussion`, and `run.py:_run_network`).
 
-### `psychographic`: demographics + political identity
+### Psychographic axes: demographics + an attitudinal driver
 
-- **Psychographics beyond demographics.** The premise that *attitudinal/identity*
-  variables (here, political affiliation) carry opinion signal the standard
-  demographic backstory misses. Political identity is among the strongest
+The premise that *attitudinal/identity* variables carry opinion signal the
+standard demographic backstory misses. Three axes are implemented, each added
+as one sentence and validated by a paired gradient
+(`diagnostics.py:axis_gradient`) against `demographic` as a control.
+
+- **Political identity** (`psychographic` method). Among the strongest
   correlates of UK climate attitudes in published polling, yet absent from the
-  Yale demographic table, which is exactly why adding it is the
-  highest-leverage persona-building change.
-  - backs: the `psychographic` method (`personas.py:_make_prompt`,
-    `_POLITICS_PHRASE`) and the political-gradient diagnostic
-    (`diagnostics.py:political_gradient`), validated against `demographic` as a
-    control.
+  Yale demographic table, which is why it's the highest-leverage axis.
+  - backs: `personas.py:_POLITICS_PHRASE`, `config.py:POLITICS`.
+
+- **Big Five Openness** (`openness` method). Openness is the personality trait
+  most consistently linked to environmental concern and pro-environmental
+  behaviour.
+  - **Soutter, A. R. B., Bates, T. C., & Mõttus, R. (2020). *Big Five and
+    HEXACO Personality Traits, Proenvironmental Attitudes, and Behaviors: A
+    Meta-Analysis.* Perspectives on Psychological Science, 15(4), 913–941.**
+    https://doi.org/10.1177/1745691620903019
+  - **Hirsh, J. B. (2010). *Personality and environmental concern.* Journal of
+    Environmental Psychology, 30(2), 245–248.**
+  - backs: `personas.py:_OPENNESS_PHRASE`, `config.py:OPENNESS`.
+
+- **Schwartz values** (`values` method). Self-transcendence (universalism /
+  benevolence) is the value orientation most strongly predictive of
+  pro-environmental attitudes; self-enhancement (power / achievement) the least.
+  - **Schwartz, S. H. (1992). *Universals in the content and structure of
+    values.* Advances in Experimental Social Psychology, 25, 1–65.**
+  - **Stern, P. C. (2000). *Toward a coherent theory of environmentally
+    significant behavior* (value-belief-norm theory). Journal of Social Issues,
+    56(3), 407–424.**
+  - backs: `personas.py:_VALUES_PHRASE`, `config.py:VALUES`.
+
+- **Why not MBTI.** Poor test-retest reliability, unsupported dichotomous
+  types, and no established link to climate attitudes, so its paired gradient
+  would have no expected sign to validate against. Rejected in favour of the
+  evidence-based axes above. (See Part 1 §5.)
 
 ### Anti-sycophancy framing
 

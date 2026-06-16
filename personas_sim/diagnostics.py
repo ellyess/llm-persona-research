@@ -75,45 +75,54 @@ def age_gradient(personas, answers, question) -> dict:
             "as_expected": grad > 0, "n_young": len(young), "n_old": len(old)}
 
 
-# Parties grouped by climate stance (not strict left/right). Climate-progressive
-# parties vs climate-skeptic parties in the UK; "no firm party allegiance" is
-# excluded from the split. The expected gradient (concerned - skeptic) is
-# positive: progressive-party voters are more climate-concerned.
+# --- paired psychographic-axis gradients ------------------------------------
+#
+# Each axis groups its categories into a HIGH-concern set and a LOW-concern set,
+# each with a KNOWN expected direction (high > low) so the gradient is a real
+# test, not a guess. Categories outside both sets (e.g. "average openness",
+# "no firm party allegiance") are excluded from the split.
+#
+# Climate-progressive vs climate-skeptic UK parties (not strict left/right):
 CONCERNED_PARTIES = {"Labour", "Liberal Democrat", "Green", "SNP / Plaid / other"}
 SKEPTIC_PARTIES = {"Conservative", "Reform UK"}
+# Big Five openness: higher openness -> more environmental concern.
+HIGH_OPENNESS = {"high openness"}
+LOW_OPENNESS = {"low openness"}
+# Schwartz values: self-transcendence -> more concern; self-enhancement -> less.
+CONCERNED_VALUES = {"self-transcendence"}
+SKEPTIC_VALUES = {"self-enhancement"}
 
 
-def political_gradient(personas, answers, question) -> dict:
-    """Concern gradient between climate-progressive-party voters and
-    climate-skeptic-party voters. A near-clone of `age_gradient` that splits on
-    `p["affiliation"]` instead of age.
+def axis_gradient(personas, answers, question, attr_key, high_set, low_set) -> dict:
+    """Concern gradient between a HIGH-concern group and a LOW-concern group,
+    split on `p[attr_key]`. A generalisation of `age_gradient` that works for
+    any psychographic axis (politics, openness, values, ...).
 
-    Run it for `psychographic` (politics IS in the prompt -> expect a clear
-    POSITIVE gradient) AND for `demographic` as a control (politics is NOT in
-    the prompt -> expect ~flat). Positive where conditioned, flat where not =
-    proof the political axis is actually driving the answers."""
+    Run it for the axis's own method (the axis IS in the prompt -> expect a clear
+    POSITIVE gradient) AND for `demographic` as a control (the axis is NOT in the
+    prompt, though the attribute is still stored -> expect ~flat). Positive where
+    conditioned, flat where not = proof the axis is actually driving the answers,
+    not leaking in via correlated demographics."""
     scores = _concern_scores(question)
-    concerned, skeptic = [], []
+    high, low = [], []
     for p, a in zip(personas, answers):
         s = _persona_score(a, scores)
         if s is None:
             continue
-        party = p.get("affiliation")
-        if party in CONCERNED_PARTIES:
-            concerned.append(s)
-        elif party in SKEPTIC_PARTIES:
-            skeptic.append(s)
+        cat = p.get(attr_key)
+        if cat in high_set:
+            high.append(s)
+        elif cat in low_set:
+            low.append(s)
 
-    if not concerned or not skeptic:
-        return {"green_mean": None, "right_mean": None, "gradient": None,
-                "as_expected": None, "n_green": len(concerned),
-                "n_right": len(skeptic)}
+    if not high or not low:
+        return {"high_mean": None, "low_mean": None, "gradient": None,
+                "as_expected": None, "n_high": len(high), "n_low": len(low)}
 
-    gm, rm = sum(concerned) / len(concerned), sum(skeptic) / len(skeptic)
-    grad = gm - rm
-    return {"green_mean": gm, "right_mean": rm, "gradient": grad,
-            "as_expected": grad > 0, "n_green": len(concerned),
-            "n_right": len(skeptic)}
+    hm, lm = sum(high) / len(high), sum(low) / len(low)
+    grad = hm - lm
+    return {"high_mean": hm, "low_mean": lm, "gradient": grad,
+            "as_expected": grad > 0, "n_high": len(high), "n_low": len(low)}
 
 
 def _tvd(p: dict, q: dict) -> float:

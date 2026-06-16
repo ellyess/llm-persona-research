@@ -17,7 +17,9 @@ from personas_sim.evaluate import (
 )
 from personas_sim.llm import parse_letter, parse_distribution
 from personas_sim.diagnostics import (
-    age_gradient, persona_dispersion, political_gradient,
+    age_gradient, persona_dispersion, axis_gradient,
+    CONCERNED_PARTIES, SKEPTIC_PARTIES, HIGH_OPENNESS, LOW_OPENNESS,
+    CONCERNED_VALUES, SKEPTIC_VALUES,
 )
 from personas_sim.personas import build_personas
 
@@ -127,38 +129,81 @@ def test_persona_dispersion_zero_when_identical():
     assert persona_dispersion([same])["mean_pairwise_tvd"] is None  # n<2
 
 
-# --- psychographic axis ------------------------------------------------------
+# --- psychographic axes ------------------------------------------------------
 
-def test_psychographic_personas_carry_affiliation():
+def test_personas_carry_all_axis_attributes():
     ps = build_personas(10, method="psychographic", seed=0)
-    assert all("affiliation" in p for p in ps)
-    # and the political clause actually reaches the prompt
-    assert any("Politically" in p["system_prompt"] or "allegiance" in p["system_prompt"]
-               for p in ps)
+    assert all({"affiliation", "openness", "values"} <= set(p) for p in ps)
+
+
+def test_each_axis_method_injects_only_its_clause():
+    # Each axis method adds ONE distinctive clause; the others stay absent.
+    poli = build_personas(8, "psychographic", 0)
+    opn = build_personas(8, "openness", 0)
+    val = build_personas(8, "values", 0)
+    demo = build_personas(8, "demographic", 0)
+    assert all("Politically" in p["system_prompt"] or "allegiance" in p["system_prompt"]
+               for p in poli)
+    assert all(("open" in p["system_prompt"].lower() or "curious" in p["system_prompt"]
+                or "conventional" in p["system_prompt"]) for p in opn)
+    assert all("What matters most" in p["system_prompt"] for p in val)
+    # demographic carries none of the axis clauses
+    assert all("Politically" not in p["system_prompt"]
+               and "What matters most" not in p["system_prompt"] for p in demo)
+
+
+def test_composite_prompt_carries_all_three_clauses():
+    ps = build_personas(8, "composite", 0)
+    for p in ps:
+        s = p["system_prompt"]
+        assert "Politically" in s or "allegiance" in s          # political
+        assert ("curious" in s or "conventional" in s or "open" in s.lower())  # openness
+        assert "What matters most" in s                          # values
 
 
 def test_separate_rng_leaves_demographic_personas_unchanged():
-    # Affiliation is drawn from seed+1, so demographic prompts must be identical
-    # across rebuilds (i.e. deterministic and independent of the politics draw).
+    # Axes are drawn from seed+1/2/3, so demographic prompts must be identical
+    # across rebuilds (deterministic and independent of the axis draws).
     a = [p["system_prompt"] for p in build_personas(10, "demographic", 0)]
     b = [p["system_prompt"] for p in build_personas(10, "demographic", 0)]
     assert a == b
-    assert all("Politically" not in s for s in a)   # demographic stays politics-free
+    assert all("Politically" not in s for s in a)
 
 
-def test_political_gradient_sign():
-    importance = {
-        "options": {"A": "x", "B": "y", "C": "z"},
-        "ground_truth": {"A": 0.34, "B": 0.33, "C": 0.33},
-    }
+_IMPORTANCE = {
+    "options": {"A": "x", "B": "y", "C": "z"},
+    "ground_truth": {"A": 0.34, "B": 0.33, "C": 0.33},
+}
+
+
+def test_axis_gradient_political_sign():
     personas = [
         {"affiliation": "Green"}, {"affiliation": "Labour"},
         {"affiliation": "Conservative"}, {"affiliation": "Reform UK"},
     ]
     answers = ["A", "A", "C", "C"]   # progressive concerned, skeptic not
-    g = political_gradient(personas, answers, importance)
+    g = axis_gradient(personas, answers, _IMPORTANCE, "affiliation",
+                      CONCERNED_PARTIES, SKEPTIC_PARTIES)
     assert g["gradient"] > 0 and g["as_expected"] is True
-    assert g["n_green"] == 2 and g["n_right"] == 2
+    assert g["n_high"] == 2 and g["n_low"] == 2
+
+
+def test_axis_gradient_openness_and_values():
+    # openness: high more concerned than low
+    op = axis_gradient(
+        [{"openness": "high openness"}, {"openness": "low openness"}],
+        ["A", "C"], _IMPORTANCE, "openness", HIGH_OPENNESS, LOW_OPENNESS)
+    assert op["gradient"] > 0 and op["as_expected"] is True
+    # values: self-transcendence more concerned than self-enhancement
+    va = axis_gradient(
+        [{"values": "self-transcendence"}, {"values": "self-enhancement"}],
+        ["A", "C"], _IMPORTANCE, "values", CONCERNED_VALUES, SKEPTIC_VALUES)
+    assert va["gradient"] > 0 and va["as_expected"] is True
+    # a category outside both sets is excluded from the split
+    none = axis_gradient(
+        [{"values": "conservation"}, {"values": "openness to change"}],
+        ["A", "C"], _IMPORTANCE, "values", CONCERNED_VALUES, SKEPTIC_VALUES)
+    assert none["gradient"] is None and none["n_high"] == 0 and none["n_low"] == 0
 
 
 if __name__ == "__main__":
