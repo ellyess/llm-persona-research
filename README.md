@@ -52,15 +52,15 @@ own survey answer ~19% of the time on re-asking, Park et al. 2024).
 | network | 45.7 | 65.3 | flips from worst to best across models |
 | elicited | 93.8 | 84.6 | highest, but see "where it broke" |
 
-*The Sonnet column and the plot above are from the same N=100 run; the Haiku
-column and the per-axis sub-results below come from their own runs, so small
-cross-run differences (a point or two) are expected.*
+*All Sonnet numbers below (this table, the plot, the psychographic-axis table,
+the climate gradients) are from one N=100 run. The Haiku column, the AI-axis
+gradients, and the elicited+axis experiment are separate runs by nature.*
 
 **The headline finding (and the most distinctive part of the project): adding
 one sentence of the right psychographic axis breaks the plateau, and a causal
 control proves it is real.** On Sonnet, climate Q1, the `demographic` persona
-sits at 72.5% (mode-collapsed onto "Very important"). Adding a single
-political-identity sentence lifts it to **91.5%**, near the ceiling. Crucially,
+sits at 75.5% (mode-collapsed onto "Very important"). Adding a single
+political-identity sentence lifts it to **88.5%**, close to the ceiling. Crucially,
 this is not just a better number: the paired **concern gradient**
 (climate-progressive voters minus climate-skeptic voters) is positive only when
 the axis is in the prompt, and flat for the matched demographic control, so the
@@ -68,10 +68,10 @@ lift is genuinely caused by the axis, not leaking from correlated demographics.
 
 | method (Sonnet, climate Q1) | accuracy | gradient in-prompt | gradient (demographic control) |
 |---|:---:|:---:|:---:|
-| demographic | 72.5% | n/a | n/a |
-| **political** | **91.5%** | **+1.77** | +0.08 |
-| values | 78.5% | +1.65 | -0.09 |
-| openness | 77.5% | +1.30 | -0.08 |
+| demographic | 75.5% | n/a | n/a |
+| **political** | **88.5%** | **+1.79** | +0.07 |
+| values | 78.5% | +1.73 | -0.10 |
+| openness | 75.5% | +1.34 | +0.02 |
 | composite (all three) | 80.5% | see below | |
 
 **Where it broke (equally important):**
@@ -87,7 +87,7 @@ lift is genuinely caused by the axis, not leaking from correlated demographics.
   (+0.26): more genuine simulation, lower number. The recital-detection
   diagnostic is what separates the two.
 - **Stacking axes does not compound.** A `composite` persona with all three
-  axes (80.5%) lands *below* the best single axis (political, 91.5%); the
+  axes (80.5%) lands *below* the best single axis (political, 88.5%); the
   weaker signals dilute the strong one, and the weakest axis's gradient
   collapses under competition. More conditioning is not better.
 
@@ -97,8 +97,8 @@ Alan Turing 2025) shows the winning axis *changes by question*:
 
 | axis (in-prompt gradient) | climate | AI |
 |------|:---:|:---:|
-| political | +1.77 (dominant) | -0.16 (null) |
-| openness | +1.25 (weakest) | +1.40 (dominant) |
+| political | +1.79 (dominant) | -0.16 (null) |
+| openness | +1.34 (weakest) | +1.40 (dominant) |
 | values | +1.73 | -1.42 (sign-flips) |
 
 Political identity, the climate champion, carries no AI signal; Openness, the
