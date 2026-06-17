@@ -152,6 +152,22 @@ def test_each_axis_method_injects_only_its_clause():
                and "What matters most" not in p["system_prompt"] for p in demo)
 
 
+def test_education_age_plausibility_constraint():
+    # No persona should hold a qualification it is too young to have reached,
+    # and the education marginal must be preserved (we only adjust the free age).
+    ps = build_personas(300, "demographic", seed=0)
+    floors = {"A-level / Scottish Higher / NVQ3": 18,
+              "other higher education below degree": 19,
+              "degree level or above": 21}
+    for p in ps:
+        edu = p["attributes"]["education"]
+        if edu in floors:
+            assert p["age"] >= floors[edu], (edu, p["age"])
+    # education categories still appear (marginal not collapsed by the constraint)
+    seen = {p["attributes"]["education"] for p in ps}
+    assert "degree level or above" in seen and len(seen) >= 4
+
+
 def test_composite_prompt_carries_all_three_clauses():
     ps = build_personas(8, "composite", 0)
     for p in ps:

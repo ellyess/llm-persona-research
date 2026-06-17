@@ -108,8 +108,25 @@ def _sample_attributes(rng: random.Random) -> dict:
     return attrs
 
 
-def _age_from_generation(generation: str, rng: random.Random) -> int:
+# Minimum plausible age to have reached each qualification level. The within-
+# generation age (an otherwise-free uniform draw) is constrained to be
+# consistent with the sampled education, which removes implausible combinations
+# (e.g. a 17-year-old "with a degree") WITHOUT touching any sampled marginal:
+# generation, education, etc. are unchanged; only the free age draw is
+# conditioned on education. Levels not listed carry no age floor.
+_EDU_MIN_AGE = {
+    "A-level / Scottish Higher / NVQ3":    18,
+    "other higher education below degree": 19,
+    "degree level or above":               21,
+}
+
+
+def _age_from_generation(generation: str, rng: random.Random,
+                         education: str = None) -> int:
     lo, hi = GEN_AGE_RANGES[generation]
+    floor = _EDU_MIN_AGE.get(education)
+    if floor is not None:
+        lo = min(max(lo, floor), hi)   # raise the floor, but never above the band
     return rng.randint(lo, hi)
 
 
@@ -136,7 +153,7 @@ def build_personas(n: int, method: str = "demographic", seed: int = 0):
     personas = []
     for _ in range(n):
         attrs = _sample_attributes(rng)
-        age = _age_from_generation(attrs["generation"], rng)
+        age = _age_from_generation(attrs["generation"], rng, attrs["education"])
         affiliation = _sample_from(POLITICS, pol_rng)
         openness = _sample_from(OPENNESS, open_rng)
         values = _sample_from(VALUES, val_rng)

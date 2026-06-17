@@ -146,8 +146,12 @@ intervals; small gaps should be treated as suggestive.
 - **Persona sampling.** Personas are drawn from the climate survey's *own
   weighted sample composition* (generation, sex, region, education, income), so
   the synthetic population matches the real frame by construction rather than by
-  stitching in separate census tables. A psychographic axis is added as exactly
-  one extra sentence, which keeps it a clean controlled comparison.
+  stitching in separate census tables. Attributes are drawn from their marginals,
+  with one plausibility constraint that costs no data integrity: a persona's age
+  is made consistent with its education (no degree below 21, and so on), which
+  removes impossible combinations while leaving every marginal exactly intact.
+  A psychographic axis is added as exactly one extra sentence, which keeps it a
+  clean controlled comparison.
 - **Why TVD and JSD.** Total Variation Distance is the intuitive distance
   between two distributions (the share of probability mass you would have to
   move to match), and `1 − TVD` reads naturally as an accuracy percentage. JSD

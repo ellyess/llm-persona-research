@@ -104,7 +104,15 @@ persona prompt needs. `GEN_AGE_RANGES` in `personas.py`:
 | Baby Boomers (1946–1964) | 60–78 |
 | Silent (1928–1945) | 79–95 |
 
-A concrete age is drawn uniformly within the range for each persona.
+A concrete age is drawn uniformly within the range for each persona, with one
+plausibility constraint: the age is made consistent with the sampled education
+(`_EDU_MIN_AGE` in `personas.py`), so a persona cannot hold a qualification it
+is too young to have reached (degree from 21, other higher education from 19,
+A-level from 18). This removes implausible combinations such as a 17-year-old
+"with a degree" WITHOUT changing any sampled marginal: generation, education,
+and the rest are untouched; only the otherwise-free within-band age draw is
+conditioned on education. Other attribute pairs (e.g. income and education) are
+still drawn independently.
 
 ---
 
@@ -365,11 +373,13 @@ on Information Theory, 37(1), 145–151.**
 
 # Honest limitations
 
-- Attributes are sampled **independently**: `config.py` holds marginal
-  distributions, not the true joint distribution (e.g. age–education and
-  age–income correlations are not modelled, so some persona combinations are
-  less plausible than real respondents). Conditional/joint sampling is the
-  obvious next step.
+- Attributes are mostly sampled **independently** from their marginals (the
+  report gives marginals, not the joint). One dependency is enforced as a
+  plausibility constraint: age is made consistent with education (see
+  "Generation → age"), which removes the worst implausible combinations while
+  preserving every marginal exactly. Other correlations (e.g. income with
+  education) are still not modelled; full joint sampling from real cross-tabs is
+  the next step.
 - Ground-truth percentages are the report's rounded figures; use Appendix I
   for exact values if reporting to more than whole-percent precision.
 - The generation→age ranges are a modelling choice (uniform within band);
