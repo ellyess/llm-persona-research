@@ -104,6 +104,25 @@ weakest climate axis, dominates AI (openness to new technology); values flips
 sign. The lesson: there is no single "best persona axis", only the right axis
 for the question, and the gradient diagnostic is how you find it.
 
+**Recitation is weak conditioning, not an inherent flaw.** A follow-up
+experiment (`ELICITED_AXIS=1`) elicits distributions from two persona sets that
+differ by one sentence: plain `demographic` personas versus `political` ones.
+On Sonnet, climate Q1, N=100:
+
+| elicited from | accuracy | persona-dispersion | political gradient |
+|---|:---:|:---:|:---:|
+| demographic (no axis) | 95.3% | 0.214 | +0.01 (flat) |
+| political (+ one sentence) | 96.2% | **0.323** | **+1.15** |
+
+Eliciting from demographic personas reproduces the recitation signature (flat
+gradient: every persona returns the same memorised aggregate). Adding one
+validated sentence raises persona-dispersion by about half and turns the
+gradient from flat to strongly positive, while accuracy barely moves. So the
+axis does not make `elicited` more accurate (it was already near the ceiling),
+it makes that accuracy *earned*: the population gains the right internal
+sub-group structure instead of just the right average. Recitation was a symptom
+of thin conditioning, not a limit of the method.
+
 Per-run numbers are written to `results*.json`; deeper provenance and the
 literature behind each choice are in [SOURCES.md](SOURCES.md).
 
