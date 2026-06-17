@@ -57,7 +57,9 @@ from .personas import (
     build_personas, question_block, elicitation_prompt, opinion_prompt,
     question_block_after_discussion, make_groups,
 )
-from .evaluate import evaluate, evaluate_distribution, valid_letters, peak
+from .evaluate import (
+    evaluate, evaluate_distribution, valid_letters, peak, bootstrap_accuracy_ci,
+)
 from .consistency import measure_consistency
 from .diagnostics import (
     age_gradient, persona_dispersion, axis_gradient,
@@ -107,7 +109,6 @@ HUMAN_CEILING = 0.91          # Stanford intra-respondent repeat-rate ceiling
 METHODS = ("baseline", "demographic", "rich", "network", "elicited")
 PERSONA_METHODS = ("demographic", "rich", "network", "elicited")
 HARDVOTE_METHODS = ("demographic", "rich", "network")   # consistency applies
-COLORS = ["#888888", "#33aa77", "#2277cc", "#cc6633", "#9944bb"]
 
 
 # --- collectors -------------------------------------------------------------
@@ -193,6 +194,8 @@ def run():
     # 5-method suite). The main results stay whatever the last full run wrote.
     if os.environ.get("EXT_ONLY"):
         return _run_extension_only()
+    if os.environ.get("ELICITED_AXIS"):
+        return _run_elicited_axis_experiment()
 
     # Build the persona pool ONCE per method and re-use across questions, so
     # method comparisons aren't contaminated by demographic sampling noise.
@@ -317,6 +320,57 @@ def _run_extension_only():
     return {"axes_q1": ext}
 
 
+def _run_elicited_axis_experiment():
+    """Does adding a real psychographic axis cure `elicited` recitation?
+
+    `elicited` is accurate but recites a memorised aggregate: low
+    persona-dispersion and a flat sub-group gradient. This experiment elicits a
+    probability distribution from two persona sets that differ by ONE sentence:
+      - demographic personas (no axis), and
+      - political personas (demographic + one political-identity sentence).
+    If the axis is doing real work under elicitation, the political cell should
+    show higher persona-dispersion and a positive political gradient, while the
+    demographic control stays flat. Runs on EXT_QUESTION (default Q1).
+    """
+    q = _target_question()
+    valid = valid_letters(q)
+    out = {"question": q["id"], "cells": {}}
+    for label, method in (("demographic", "demographic"),
+                          ("political", "psychographic")):
+        personas = build_personas(N, method=method, seed=SEED)
+        dists = _collect_distributions(personas, q)
+        mean, unparse = _mean_distribution(dists, valid)
+        out["cells"][label] = {
+            "eval": evaluate_distribution(mean, q, unparse, len(dists)),
+            "dispersion": persona_dispersion(dists),
+            "gradient": axis_gradient(personas, dists, q, "affiliation",
+                                      CONCERNED_PARTIES, SKEPTIC_PARTIES,
+                                      expected="positive"),
+        }
+
+    print(f"\n(ELICITED_AXIS: does a real axis cure recitation? {q['id']}, N={N})")
+    print("    cell           dist.acc%   dispersion   pol.gradient")
+    print("    " + "-" * 52)
+    for label in ("demographic", "political"):
+        c = out["cells"][label]
+        disp = c["dispersion"]["mean_pairwise_tvd"]
+        g = c["gradient"]["gradient"]
+        tag = "  (control)" if label == "demographic" else ""
+        print("    {:<13} {:>8.1f}% {:>11} {:>13}{}".format(
+            label,
+            100 * c["eval"]["distribution_accuracy"],
+            f"{disp:.3f}" if disp is not None else "n/a",
+            f"{g:+.2f}" if g is not None else "n/a",
+            tag,
+        ))
+    print("    higher dispersion + positive political gradient = the axis makes")
+    print("    elicited personas individuate rather than recite one aggregate.")
+    with open("results_elicited_axis.json", "w") as f:
+        json.dump(out, f, indent=2)
+    print("wrote results_elicited_axis.json")
+    return out
+
+
 def _run_one_question(question, persona_pool):
     """Return (evals, raw) for one question, where
        evals = {method: evaluation-dict}
@@ -343,6 +397,12 @@ def _run_one_question(question, persona_pool):
     mean, unparse = _mean_distribution(dists, valid)
     evals["elicited"] = evaluate_distribution(mean, question, unparse, len(dists))
     raw["elicited"] = dists
+
+    # Bootstrap a 95% CI for each method's accuracy by resampling personas.
+    # Pure-Python and offline (no extra API calls); reflects sampling noise at
+    # this N, not model stochasticity across runs.
+    for m in evals:
+        evals[m]["acc_ci"] = bootstrap_accuracy_ci(raw[m], question, seed=SEED)
 
     return evals, raw
 
@@ -386,19 +446,19 @@ def _report(per_question, averaged, consistency, gradients, dispersion, ext=None
         print(f"    \"{question['text']}\"")
         gt_s = "  ".join(f"{k}={gt[k]:.2f}" for k in letters)
         print(f"    ground truth:   {gt_s}   (peak {100*gt_peak:.0f}%)")
-        print("    {:<13} {:>9} {:>6} {:>6} {:>9}   distribution".format(
-            "method", "dist.acc%", "JSD", "peak%", "unparse%"))
-        print("    " + "-" * 84)
+        print("    {:<13} {:>9} {:>18} {:>6} {:>6}".format(
+            "method", "dist.acc%", "95% CI", "JSD", "peak%"))
+        print("    " + "-" * 60)
         for m in METHODS:
             r = per_question[qid][m]
-            dist = "  ".join(f"{k}={r['distribution'][k]:.2f}" for k in letters)
-            print("    {:<13} {:>8.1f}% {:>6.3f} {:>5.0f}% {:>8.1f}%   {}".format(
+            lo, hi = r.get("acc_ci", (None, None))
+            ci = (f"[{100*lo:.1f}, {100*hi:.1f}]" if lo is not None else "n/a")
+            print("    {:<13} {:>8.1f}% {:>18} {:>6.3f} {:>5.0f}%".format(
                 m,
                 100 * r["distribution_accuracy"],
+                ci,
                 r["jsd"],
                 100 * r["peak"],
-                100 * r["unparseable_rate"],
-                dist,
             ))
         print()
 
@@ -546,63 +606,78 @@ def _save(per_question, averaged, consistency, gradients, dispersion, ext=None):
     with open("results.json", "w") as f:
         json.dump(out, f, indent=2)
     try:
-        _plot(per_question, averaged)
+        _plot(per_question)
     except Exception as e:
         print(f"(skipped plot: {e})")
 
 
-def _plot(per_question, averaged):
-    """One subplot per question (each method's distribution vs truth) plus an
-    averaged-accuracy summary with the human-ceiling line."""
+def _plot(per_question):
+    """Per-question distribution comparisons (method vs ground truth), plus a
+    summary panel of accuracy per method and question with 95% bootstrap CI
+    error bars. Styled with seaborn."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import numpy as np
+    import seaborn as sns
+
+    sns.set_theme(style="whitegrid", context="talk")
+    method_colors = sns.color_palette("deep", len(METHODS))
+    q_colors = sns.color_palette("colorblind", len(QUESTIONS))
 
     n_q = len(QUESTIONS)
-    fig, axes = plt.subplots(n_q + 1, 1, figsize=(11, 3.4 * (n_q + 1)))
+    fig, axes = plt.subplots(n_q + 1, 1, figsize=(12, 3.6 * (n_q + 1)))
     if n_q + 1 == 1:
         axes = [axes]
 
+    # One distribution panel per question: ground truth then each method.
     for ax, question in zip(axes[:n_q], QUESTIONS):
         qid = question["id"]
         letters = valid_letters(question)
         gt = question["ground_truth"]
         x = np.arange(len(letters))
         width = 0.8 / (len(METHODS) + 1)
-
         ax.bar(x - 0.4 + width / 2, [gt[k] for k in letters], width,
-               label="Ground truth", color="black")
+               label="ground truth", color="0.25")
         for i, m in enumerate(METHODS):
             d = per_question[qid][m]["distribution"]
             acc = per_question[qid][m]["distribution_accuracy"]
-            ax.bar(x - 0.4 + width * (i + 1.5),
-                   [d[k] for k in letters], width,
-                   label=f"{m} (acc {100*acc:.0f}%)", color=COLORS[i])
+            ax.bar(x - 0.4 + width * (i + 1.5), [d[k] for k in letters], width,
+                   label=f"{m} ({100*acc:.0f}%)", color=method_colors[i])
         ax.set_xticks(x)
         ax.set_xticklabels(
             [f"{k}\n{question['options'][k].split()[0]}" for k in letters])
         ax.set_ylabel("proportion")
-        ax.set_title(f"{qid}: {question['text']}")
-        ax.legend(fontsize=8, loc="upper right")
+        ax.set_title(f"{qid}: {question['text']}", fontsize=12)
+        ax.legend(fontsize=8, loc="upper right", ncol=2)
 
-    # Bottom subplot: averaged accuracy for the FIRST topic (climate), the
-    # headline set; `averaged` is now {topic: {method: avg}}.
+    # Summary panel: accuracy per method, grouped by question, with 95% CIs.
     ax = axes[-1]
-    topic0 = next(iter(averaged))
-    avg0 = averaged[topic0]
-    n_topic_q = sum(1 for q in QUESTIONS if q.get("topic", "other") == topic0)
     methods = list(METHODS)
-    accs = [100 * avg0[m] for m in methods]
-    ax.bar(methods, accs, color=COLORS[:len(methods)])
-    ax.axhline(100 * HUMAN_CEILING, color="black", linestyle="--",
-               label=f"Human ceiling ({100*HUMAN_CEILING:.0f}%)")
-    ax.set_ylabel("avg distribution accuracy (%)")
+    xm = np.arange(len(methods))
+    gw = 0.8 / n_q
+    for j, question in enumerate(QUESTIONS):
+        qid = question["id"]
+        accs, lo_err, hi_err = [], [], []
+        for m in methods:
+            r = per_question[qid][m]
+            a = 100 * r["distribution_accuracy"]
+            lo, hi = r.get("acc_ci", (None, None))
+            accs.append(a)
+            lo_err.append(0 if lo is None else a - 100 * lo)
+            hi_err.append(0 if hi is None else 100 * hi - a)
+        ax.bar(xm - 0.4 + gw * (j + 0.5), accs, gw,
+               yerr=[lo_err, hi_err], capsize=3, label=qid,
+               color=q_colors[j], error_kw={"linewidth": 1})
+    ax.axhline(100 * HUMAN_CEILING, color="0.25", linestyle="--",
+               label=f"human ceiling ({100*HUMAN_CEILING:.0f}%)")
+    ax.set_xticks(xm)
+    ax.set_xticklabels(methods)
+    ax.set_ylabel("distribution accuracy (%)")
     ax.set_ylim(0, 100)
-    ax.set_title(f"Averaged across {n_topic_q} {topic0} questions")
-    for m, a in zip(methods, accs):
-        ax.text(m, a + 1, f"{a:.0f}%", ha="center", fontsize=9)
-    ax.legend(fontsize=8)
+    ax.set_title("Accuracy by method and question (error bars = 95% bootstrap CI)",
+                 fontsize=12)
+    ax.legend(fontsize=8, ncol=2)
 
     fig.tight_layout()
     fig.savefig("comparison.png", dpi=130)

@@ -36,6 +36,12 @@ pointed at a second topic (AI attitudes) to test generality.
 
 ![Five methods vs ground truth across the climate questions, claude-sonnet-4-6](sonnet_comparison.png)
 
+<!-- TODO: this committed plot is the earlier climate-only (3-question) render
+     and predates the confidence intervals. Regenerate from a real run
+     (`MODEL=claude-sonnet-4-6 USE_MOCK=0 python -m personas_sim.run`) to get the
+     current 4-question, seaborn-styled plot with 95% CI error bars, then commit
+     it (under a non-ignored name) and update this path. -->
+
 100 personas, 3 Yale climate questions, two models. Distribution accuracy
 (`1 − TVD`, %); the human-replication ceiling is about 91% (people change their
 own survey answer ~19% of the time on re-asking, Park et al. 2024).
@@ -101,9 +107,15 @@ for the question, and the gradient diagnostic is how you find it.
 Per-run numbers are written to `results*.json`; deeper provenance and the
 literature behind each choice are in [SOURCES.md](SOURCES.md).
 
-> Caveat: N=100, single run per cell (about 3 points of LLM sampling noise), no
-> bootstrap confidence intervals yet. Differences within a few points should be
-> read as suggestive, not settled. See Limitations.
+Every accuracy now carries a **95% bootstrap confidence interval** (resampling
+the 100 personas with replacement); the per-question table and the summary plot
+show them, so method gaps can be read as real or as sampling noise. The large
+gaps above (for example political vs demographic) sit well outside their
+intervals; small gaps should be treated as suggestive.
+
+> Caveat: one run per cell, so the CIs capture persona sampling noise but not
+> model stochasticity across runs (about 3 points, seen between repeat runs).
+> See Limitations.
 
 ## How it works (methodology)
 
@@ -122,7 +134,9 @@ literature behind each choice are in [SOURCES.md](SOURCES.md).
   move to match), and `1 − TVD` reads naturally as an accuracy percentage. JSD
   is reported alongside as a symmetric, bounded second opinion. Both score the
   whole distribution, which is the quantity that actually matters here, not
-  top-line agreement.
+  top-line agreement. Each accuracy also gets a **95% bootstrap confidence
+  interval** (resampling the personas with replacement), so differences can be
+  judged against sampling noise rather than eyeballed.
 - **Diagnostics (the distinctive part).** Accuracy alone can be a coincidence,
   so every headline number is cross-checked: the **peak** check flags mode
   collapse; the **causal gradient** check asks whether a known real-world
@@ -165,9 +179,10 @@ docker run --rm llm-persona
 
 ## Limitations and next steps
 
-- **No confidence intervals.** Single run per cell; a bootstrap CI over
-  resampled personas would tell which method gaps are real. Highest-priority
-  next step.
+- **One run per cell.** Accuracy now carries a 95% bootstrap CI over resampled
+  personas, but each cell is still a single model run, so model stochasticity
+  across runs (about 3 points) is not captured. Repeating each run a handful of
+  times and reporting the spread is the next step.
 - **Approximate inputs.** The psychographic-axis marginals (political affiliation,
   Big Five openness, Schwartz values) are reasonable but approximate modelling
   inputs, not exact population statistics; the rigour is in the *direction* of

@@ -8,20 +8,24 @@ Two entry points, because methods produce two shapes of output:
                                          (the `elicited` / verbalized-sampling method)
 
 Metrics:
-  - distribution_accuracy = 1 - TVD, as a fraction. The headline metric in the
-    AS Jan-2026 eval report ("what share of response mass landed in the right
-    buckets").
+  - distribution_accuracy = 1 - TVD, as a fraction ("what share of response
+    mass landed in the right buckets"); the standard way to score an LM opinion
+    distribution against a survey result.
   - JSD: symmetric, bounded [0,1] (log base 2).
   - peak: the modal bucket's share. Compared to the ground-truth peak, this
     surfaces MODE COLLAPSE -- a method whose peak is far above truth's has
     funnelled the population onto one option.
   - entropy: Shannon entropy (bits). Low entropy vs ground truth is the same
     mode-collapse signal from the spread side.
+  - bootstrap_accuracy_ci: a percentile confidence interval for the accuracy,
+    by resampling the personas with replacement, so method gaps can be read as
+    real or as sampling noise.
 
 Also reports the unparseable rate (failed answers) as a data-quality check.
 """
 
 import math
+import random
 
 
 def valid_letters(question) -> list:
@@ -114,3 +118,40 @@ def evaluate_distribution(dist: dict, question: dict,
     out["unparseable_rate"] = unparseable
     out["n"] = n
     return out
+
+
+def _mean_soft(dists, question) -> dict:
+    """Average non-None per-persona distributions (mirrors the `elicited`
+    method's aggregation in run.py)."""
+    letters = valid_letters(question)
+    good = [d for d in dists if d is not None]
+    if not good:
+        return {k: 0.0 for k in letters}
+    return {k: sum(d[k] for d in good) / len(good) for k in letters}
+
+
+def bootstrap_accuracy_ci(answers, question, n_boot=2000, seed=0, conf=0.95):
+    """Percentile bootstrap confidence interval for distribution accuracy.
+
+    `answers` is the per-persona output, EITHER a list of letters/None
+    (hard-vote methods) OR a list of soft-distribution dicts/None (the
+    `elicited` method). Resamples the personas with replacement `n_boot` times,
+    recomputes the population distribution and its accuracy each time, and
+    returns (lo, hi) at the given confidence level. The interval reflects
+    persona sampling noise at this N; it does NOT capture model stochasticity
+    across runs (that needs repeated full runs). Returns (None, None) if empty."""
+    n = len(answers)
+    if n == 0:
+        return (None, None)
+    gt = question["ground_truth"]
+    soft = any(isinstance(a, dict) for a in answers)
+    rng = random.Random(seed)
+    accs = []
+    for _ in range(n_boot):
+        sample = [answers[rng.randrange(n)] for _ in range(n)]
+        dist = _mean_soft(sample, question) if soft else to_distribution(sample, question)
+        accs.append(distribution_accuracy(dist, gt))
+    accs.sort()
+    lo = accs[int((1 - conf) / 2 * n_boot)]
+    hi = accs[min(n_boot - 1, int((1 + conf) / 2 * n_boot))]
+    return (lo, hi)

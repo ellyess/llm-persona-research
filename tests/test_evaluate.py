@@ -197,6 +197,26 @@ def test_axis_gradient_exploratory_makes_no_claim():
     assert g["gradient"] is not None and g["as_expected"] is None
 
 
+def test_bootstrap_ci_brackets_point_estimate_and_is_deterministic():
+    from personas_sim.evaluate import bootstrap_accuracy_ci
+    # An interior point estimate (~0.85), not the boundary, so a percentile CI
+    # can bracket it from both sides.
+    answers = ["A"] * 40 + ["B"] * 20 + ["C"] * 20 + ["D"] * 20
+    point = evaluate(answers, Q)["distribution_accuracy"]
+    lo, hi = bootstrap_accuracy_ci(answers, Q, n_boot=1000, seed=0)
+    assert lo is not None and 0.0 <= lo <= hi <= 1.0
+    assert lo - 1e-9 <= point <= hi + 1e-9          # CI brackets the estimate
+    assert bootstrap_accuracy_ci(answers, Q, n_boot=1000, seed=0) == (lo, hi)  # deterministic
+    assert bootstrap_accuracy_ci([], Q) == (None, None)               # empty
+
+
+def test_bootstrap_ci_handles_soft_distributions():
+    from personas_sim.evaluate import bootstrap_accuracy_ci
+    dists = [{"A": 0.25, "B": 0.25, "C": 0.25, "D": 0.25}] * 20
+    lo, hi = bootstrap_accuracy_ci(dists, Q, n_boot=300, seed=1)
+    assert lo is not None and lo <= hi
+
+
 def test_ai_question_present_and_evaluates():
     from personas_sim.config import QUESTIONS
     ai = [q for q in QUESTIONS if q.get("topic") == "ai"]
