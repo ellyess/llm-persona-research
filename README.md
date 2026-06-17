@@ -34,13 +34,11 @@ pointed at a second topic (AI attitudes) to test generality.
 
 ## Results
 
-![Five methods vs ground truth across the climate questions, claude-sonnet-4-6](sonnet_comparison.png)
+![Five methods vs ground truth on all four questions, with a 95% bootstrap CI accuracy summary, claude-sonnet-4-6 (N=100)](sonnet_comparison.png)
 
-<!-- TODO: this committed plot is the earlier climate-only (3-question) render
-     and predates the confidence intervals. Regenerate from a real run
-     (`MODEL=claude-sonnet-4-6 USE_MOCK=0 python -m personas_sim.run`) to get the
-     current 4-question, seaborn-styled plot with 95% CI error bars, then commit
-     it (under a non-ignored name) and update this path. -->
+*Four distribution panels (three climate questions plus the AI generality
+question) and a summary panel of accuracy by method and question with 95%
+bootstrap CI error bars. claude-sonnet-4-6, N=100.*
 
 100 personas, 3 Yale climate questions, two models. Distribution accuracy
 (`1 − TVD`, %); the human-replication ceiling is about 91% (people change their
