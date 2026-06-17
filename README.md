@@ -46,11 +46,15 @@ own survey answer ~19% of the time on re-asking, Park et al. 2024).
 
 | method | Haiku avg | Sonnet avg | read |
 |--------|:---:|:---:|---|
-| baseline | 40.0 | 32.7 | no-persona model collapses to one option |
-| demographic | 63.3 | 65.3 | the synthetic-persona plateau (~60-67%, matching prior prompt-based work) |
-| rich | 54.7 | 63.0 | more backstory hurts on Haiku, helps on Sonnet |
-| network | 45.7 | 67.0 | flips from worst to best across models |
-| elicited | 93.8 | 85.2 | highest, but see "where it broke" |
+| baseline | 40.0 | 27.3 | no-persona model collapses to one option |
+| demographic | 63.3 | 64.3 | the synthetic-persona plateau (~60-67%, matching prior prompt-based work) |
+| rich | 54.7 | 61.7 | more backstory hurts on Haiku, helps on Sonnet |
+| network | 45.7 | 65.3 | flips from worst to best across models |
+| elicited | 93.8 | 84.6 | highest, but see "where it broke" |
+
+*The Sonnet column and the plot above are from the same N=100 run; the Haiku
+column and the per-axis sub-results below come from their own runs, so small
+cross-run differences (a point or two) are expected.*
 
 **The headline finding (and the most distinctive part of the project): adding
 one sentence of the right psychographic axis breaks the plateau, and a causal
@@ -79,7 +83,7 @@ lift is genuinely caused by the axis, not leaking from correlated demographics.
   (93.8%), which is a red flag, not a win. Its persona-dispersion is low (0.18)
   and its sub-group gradient is flat, so the model is **reciting a memorised
   population prior, not simulating distinct people**. On Sonnet it drops below
-  the ceiling (85.2%) with higher dispersion (0.21) and a real gradient
+  the ceiling (84.6%) with higher dispersion (0.21) and a real gradient
   (+0.26): more genuine simulation, lower number. The recital-detection
   diagnostic is what separates the two.
 - **Stacking axes does not compound.** A `composite` persona with all three
